@@ -13,6 +13,7 @@ namespace HaikyuuGame.Gameplay.Match
         private readonly PlayerActor _libero;
         private readonly Vector3[] _slotPositions;
         private int _rotationOffset;
+        private int _activePlayerCount = 6;
 
         public TeamRotation(TeamSide team, IReadOnlyList<PlayerActor> sixPlayerRoster, PlayerActor libero, IReadOnlyList<Vector3> slotPositions)
         {
@@ -31,19 +32,24 @@ namespace HaikyuuGame.Gameplay.Match
 
         public TeamSide Team => _team;
         public int RotationOffset => _rotationOffset;
-
-        // Slot 3 is the prototype service position. The server always comes from
-        // the six-player rotation, never from the libero replacement layer.
-        public PlayerActor CurrentServer => GetOccupant(3);
+        public int ActivePlayerCount => _activePlayerCount;
+        public PlayerActor CurrentServer => GetOccupant(_activePlayerCount == 3 ? 2 : 3);
 
         public PlayerActor GetActiveAtSlot(int slot)
         {
             return slot >= 0 && slot < _activeBySlot.Length ? _activeBySlot[slot] : null;
         }
 
+        public void SetActivePlayerCount(int count)
+        {
+            _activePlayerCount = count <= 3 ? 3 : 6;
+            _rotationOffset = 0;
+            RefreshCourtAssignments();
+        }
+
         public void RotateClockwise()
         {
-            _rotationOffset = (_rotationOffset + 1) % 6;
+            _rotationOffset = (_rotationOffset + 1) % _activePlayerCount;
             RefreshCourtAssignments();
         }
 
@@ -76,11 +82,41 @@ namespace HaikyuuGame.Gameplay.Match
 
         private void RefreshCourtAssignments()
         {
+            if (_activePlayerCount == 3)
+            {
+                RefreshThreePlayerAssignments();
+                return;
+            }
+
+            RefreshSixPlayerAssignments();
+        }
+
+        private void RefreshThreePlayerAssignments()
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                _activeBySlot[i] = null;
+                _roster[i].SetCourtAssignment(-1, HiddenPosition(), false);
+            }
+
+            if (_libero != null)
+            {
+                _libero.SetCourtAssignment(-1, HiddenPosition(), false);
+            }
+
+            for (int slot = 0; slot < 3; slot++)
+            {
+                PlayerActor occupant = GetOccupant(slot);
+                occupant.SetCourtAssignment(slot, ThreePlayerPosition(slot), true);
+                _activeBySlot[slot] = occupant;
+            }
+        }
+
+        private void RefreshSixPlayerAssignments()
+        {
             int liberoSlot = -1;
             PlayerActor replacedMiddle = null;
 
-            // Slot 3 is serving in this prototype. FIVB-style play does not let
-            // the libero serve, so only replace a back-row middle in slots 4/5.
             for (int slot = 4; slot < 6; slot++)
             {
                 PlayerActor occupant = GetOccupant(slot);
@@ -116,8 +152,17 @@ namespace HaikyuuGame.Gameplay.Match
 
         private PlayerActor GetOccupant(int slot)
         {
-            int rosterIndex = (slot - _rotationOffset + 6) % 6;
+            int modulus = _activePlayerCount == 3 ? 3 : 6;
+            int rosterIndex = (slot - _rotationOffset + modulus) % modulus;
             return _roster[rosterIndex];
+        }
+
+        private Vector3 ThreePlayerPosition(int slot)
+        {
+            float sign = _team == TeamSide.Left ? -1f : 1f;
+            if (slot == 0) return new Vector3(sign * 2.2f, 1f, 0f);
+            if (slot == 1) return new Vector3(sign * 5.6f, 1f, -2.25f);
+            return new Vector3(sign * 5.6f, 1f, 2.25f);
         }
 
         private Vector3 HiddenPosition()
