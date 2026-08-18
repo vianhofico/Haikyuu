@@ -55,6 +55,23 @@ namespace HaikyuuGame.Meta
             OpenMenu();
         }
 
+        public void AwardCoins(int amount, string reason)
+        {
+            if (_saveService == null || _saveService.Current == null || amount <= 0)
+            {
+                return;
+            }
+
+            _saveService.Current.coins += amount;
+            _saveService.Save();
+            ShowToast(string.IsNullOrEmpty(reason) ? $"+{amount} coins" : $"{reason} +{amount} coins");
+        }
+
+        public void CommitSave()
+        {
+            _saveService?.Save();
+        }
+
         private void OnDestroy()
         {
             if (_rally != null) _rally.MatchCompleted -= OnMatchCompleted;
@@ -277,7 +294,7 @@ namespace HaikyuuGame.Meta
                 DrawDreamTeamEditor(x + 35f, infoY + 110f, width - 70f);
             }
 
-            GUI.Label(new Rect(x + 35f, y + height - 28f, width - 70f, 22f), "M / Esc: resume | L: VI/EN");
+            GUI.Label(new Rect(x + 35f, y + height - 28f, width - 70f, 22f), "M / Esc: resume | L: VI/EN | F2: stats | P: rally trace");
         }
 
         private void DrawCareerEditor(float x, float y, float width)
