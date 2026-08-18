@@ -16,6 +16,7 @@ required = [
     "Assets/HaikyuuGame/Runtime/Career/CareerService.cs",
     "Assets/HaikyuuGame/Runtime/Career/CareerProfileFactory.cs",
     "Assets/HaikyuuGame/Runtime/Meta/DreamTeamService.cs",
+    "Assets/HaikyuuGame/Runtime/Progression/CompletionProgressController.cs",
     "Assets/HaikyuuGame/Runtime/Training/ChallengeController.cs",
     "Assets/HaikyuuGame/Runtime/Gameplay/Presentation/RallyReplayTrace.cs",
     "Assets/HaikyuuGame/Runtime/Gameplay/UI/MatchStatisticsOverlay.cs",
@@ -50,8 +51,8 @@ if manifest.exists():
 save_service = ROOT / "Assets/HaikyuuGame/Runtime/Persistence/SaveGameService.cs"
 if save_service.exists():
     text = save_service.read_text(encoding="utf-8")
-    if "CurrentVersion = 2" not in text:
-        errors.append("save service is not pinned to version 2")
+    if "CurrentVersion = 3" not in text:
+        errors.append("save service is not pinned to version 3")
 
 mode_file = ROOT / "Assets/HaikyuuGame/Runtime/Meta/GameMode.cs"
 if mode_file.exists() and "Arcade3v3" not in mode_file.read_text(encoding="utf-8"):
@@ -70,6 +71,13 @@ if possession_file.exists():
     possession = possession_file.read_text(encoding="utf-8")
     if "Double contact" not in possession or "Four contacts" not in possession:
         errors.append("possession fault reasons are incomplete")
+
+rally_file = ROOT / "Assets/HaikyuuGame/Runtime/Gameplay/Match/RallyController.cs"
+if rally_file.exists():
+    rally = rally_file.read_text(encoding="utf-8")
+    for required_snippet in ("Back-row attack fault", "Libero illegal attack", "SetPlayersPerSide"):
+        if required_snippet not in rally:
+            errors.append(f"RallyController missing required rule/format hook: {required_snippet}")
 
 for path in (ROOT / "Assets/HaikyuuGame").rglob("*.cs"):
     text = path.read_text(encoding="utf-8")
