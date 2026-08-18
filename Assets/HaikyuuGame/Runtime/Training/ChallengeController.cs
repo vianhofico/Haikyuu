@@ -2,7 +2,6 @@ using HaikyuuGame.Core;
 using HaikyuuGame.Gameplay.Ball;
 using HaikyuuGame.Gameplay.Match;
 using HaikyuuGame.Meta;
-using HaikyuuGame.Persistence;
 using UnityEngine;
 
 namespace HaikyuuGame.Training
@@ -100,10 +99,8 @@ namespace HaikyuuGame.Training
             {
                 _completed = true;
                 _message = "Challenge complete! +100 coins";
-                SaveGameService saveService = new SaveGameService();
-                SaveGameData save = saveService.Load();
-                save.coins += 100;
-                saveService.Save();
+                GameShellController shell = FindFirstObjectByType<GameShellController>();
+                shell?.AwardCoins(100, "Challenge complete!");
             }
             else
             {
