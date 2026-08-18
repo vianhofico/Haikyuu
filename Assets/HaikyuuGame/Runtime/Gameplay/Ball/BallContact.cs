@@ -22,12 +22,14 @@ namespace HaikyuuGame.Gameplay.Ball
             TeamSide team,
             PlayerActor player,
             BallContactType type,
+            ContactTimingGrade timing,
             Vector3 velocity,
             float timestamp)
         {
             Team = team;
             Player = player;
             Type = type;
+            Timing = timing;
             Velocity = velocity;
             Timestamp = timestamp;
         }
@@ -35,6 +37,7 @@ namespace HaikyuuGame.Gameplay.Ball
         public TeamSide Team { get; }
         public PlayerActor Player { get; }
         public BallContactType Type { get; }
+        public ContactTimingGrade Timing { get; }
         public Vector3 Velocity { get; }
         public float Timestamp { get; }
         public bool CountsAsTeamTouch => Type != BallContactType.Serve && Type != BallContactType.Block;

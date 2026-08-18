@@ -30,18 +30,19 @@ namespace HaikyuuGame.Gameplay.Presentation
 
         private void OnBallContact(BallContact contact)
         {
+            float timingBoost = contact.Timing == ContactTimingGrade.Perfect ? 1.6f : 1f;
             switch (contact.Type)
             {
                 case BallContactType.Attack:
-                    _camera?.Punch(0.12f);
-                    TriggerSlowMotion(0.035f, 0.72f);
+                    _camera?.Punch(0.12f * timingBoost);
+                    TriggerSlowMotion(contact.Timing == ContactTimingGrade.Perfect ? 0.055f : 0.035f, contact.Timing == ContactTimingGrade.Perfect ? 0.56f : 0.72f);
                     break;
                 case BallContactType.Block:
-                    _camera?.Punch(0.16f);
-                    TriggerSlowMotion(0.045f, 0.62f);
+                    _camera?.Punch(0.16f * timingBoost);
+                    TriggerSlowMotion(contact.Timing == ContactTimingGrade.Perfect ? 0.065f : 0.045f, contact.Timing == ContactTimingGrade.Perfect ? 0.52f : 0.62f);
                     break;
                 case BallContactType.Serve:
-                    _camera?.Punch(0.035f);
+                    _camera?.Punch(0.035f * timingBoost);
                     break;
             }
         }

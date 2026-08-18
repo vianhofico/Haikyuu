@@ -9,6 +9,7 @@ namespace HaikyuuGame.Gameplay.Match
     {
         private readonly TeamSide _team;
         private readonly PlayerActor[] _roster;
+        private readonly PlayerActor[] _activeBySlot = new PlayerActor[6];
         private readonly PlayerActor _libero;
         private readonly Vector3[] _slotPositions;
         private int _rotationOffset;
@@ -35,6 +36,12 @@ namespace HaikyuuGame.Gameplay.Match
 
         public TeamSide Team => _team;
         public int RotationOffset => _rotationOffset;
+        public PlayerActor CurrentServer => GetActiveAtSlot(3);
+
+        public PlayerActor GetActiveAtSlot(int slot)
+        {
+            return slot >= 0 && slot < _activeBySlot.Length ? _activeBySlot[slot] : null;
+        }
 
         public void RotateClockwise()
         {
@@ -52,10 +59,13 @@ namespace HaikyuuGame.Gameplay.Match
         {
             for (int i = 0; i < _roster.Length; i++)
             {
-                _roster[i].ResetToHome();
+                if (_roster[i].gameObject.activeSelf)
+                {
+                    _roster[i].ResetToHome();
+                }
             }
 
-            if (_libero != null)
+            if (_libero != null && _libero.gameObject.activeSelf)
             {
                 _libero.ResetToHome();
             }
@@ -82,6 +92,7 @@ namespace HaikyuuGame.Gameplay.Match
                 PlayerActor occupant = GetOccupant(slot);
                 bool active = occupant != replacedMiddle;
                 occupant.SetCourtAssignment(slot, _slotPositions[slot], active);
+                _activeBySlot[slot] = active ? occupant : null;
             }
 
             if (_libero != null)
@@ -89,6 +100,7 @@ namespace HaikyuuGame.Gameplay.Match
                 if (liberoSlot >= 0)
                 {
                     _libero.SetCourtAssignment(liberoSlot, _slotPositions[liberoSlot], true);
+                    _activeBySlot[liberoSlot] = _libero;
                 }
                 else
                 {

@@ -32,14 +32,15 @@ namespace HaikyuuGame.Gameplay.Ball
             PlayerActor player,
             BallContactType contactType,
             Vector3 velocity,
-            Vector3 angularVelocity)
+            Vector3 angularVelocity,
+            ContactTimingGrade timing = ContactTimingGrade.Good)
         {
             LastTouchTeam = team;
             LastContactType = contactType;
             _body.WakeUp();
             _body.linearVelocity = velocity;
             _body.angularVelocity = angularVelocity;
-            BallContact contact = new BallContact(team, player, contactType, velocity, Time.time);
+            BallContact contact = new BallContact(team, player, contactType, timing, velocity, Time.time);
             LastContact = contact;
             Contacted?.Invoke(contact);
         }
@@ -56,14 +57,14 @@ namespace HaikyuuGame.Gameplay.Ball
             _body.Sleep();
         }
 
-        public void WakeAndServe(TeamSide team, Vector3 velocity)
+        public void WakeAndServe(
+            TeamSide team,
+            PlayerActor server,
+            Vector3 velocity,
+            Vector3 angularVelocity,
+            ContactTimingGrade timing)
         {
-            Contact(
-                team,
-                null,
-                BallContactType.Serve,
-                velocity,
-                new Vector3(0f, 0f, -8f * Mathf.Sign(velocity.x)));
+            Contact(team, server, BallContactType.Serve, velocity, angularVelocity, timing);
         }
     }
 }
