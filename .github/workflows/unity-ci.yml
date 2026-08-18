@@ -1,4 +1,4 @@
-name: Unity build and smoke
+name: Unity build, smoke and Android APK
 
 on:
   push:
@@ -30,6 +30,7 @@ jobs:
 
   unity-linux-smoke:
     name: Unity 6.3 Linux headless smoke
+    needs: repository-sanity
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -115,3 +116,68 @@ jobs:
           path: build/StandaloneLinux64
           if-no-files-found: error
           retention-days: 7
+
+  android-apk:
+    name: Android development APK
+    needs: repository-sanity
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect Unity license configuration
+        id: license
+        shell: bash
+        run: |
+          personal=false
+          professional=false
+          if [[ -n "$UNITY_LICENSE" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
+            personal=true
+          fi
+          if [[ -n "$UNITY_SERIAL" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
+            professional=true
+          fi
+          if [[ "$personal" == "true" || "$professional" == "true" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Unity CI license configuration detected."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Android APK build skipped. Configure UNITY_LICENSE + UNITY_EMAIL + UNITY_PASSWORD for Personal, or UNITY_SERIAL + UNITY_EMAIL + UNITY_PASSWORD for Pro."
+          fi
+
+      - name: Build Android APK with Unity 6.3
+        if: steps.license.outputs.available == 'true'
+        uses: game-ci/unity-builder@v5.0.0
+        with:
+          unityVersion: 6000.3.0f1
+          targetPlatform: Android
+          buildName: Haikyuu
+          buildsPath: build
+          buildMethod: HaikyuuGame.Editor.CiBuild.BuildAndroidApk
+          androidExportType: androidPackage
+          allowDirtyBuild: true
+
+      - name: Verify APK
+        if: steps.license.outputs.available == 'true'
+        shell: bash
+        run: |
+          apk="build/Android/Haikyuu.apk"
+          if [[ ! -f "$apk" ]]; then
+            echo "Expected APK not found: $apk"
+            find build -maxdepth 4 -type f -print || true
+            exit 1
+          fi
+          ls -lh "$apk"
+          sha256sum "$apk" | tee build/Android/Haikyuu.apk.sha256
+
+      - name: Upload Android APK
+        if: success() && steps.license.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Haikyuu-Android-APK
+          path: |
+            build/Android/Haikyuu.apk
+            build/Android/Haikyuu.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
