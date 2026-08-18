@@ -1,105 +1,170 @@
-# Production Roadmap
+# Production Roadmap / Completion Matrix
 
-## Phase 0 — Foundation
+This document tracks **code completion separately from runtime validation and final-asset production**.
 
-- [x] Unity project skeleton
-- [x] Git-friendly layout
-- [x] Runtime bootstrap
-- [x] Data-driven character/skill definitions
-- [x] Architecture documentation
-- [ ] Assembly definitions after boundaries stabilize
-- [ ] Automated edit-mode tests
+## Phase 0 — Foundation — CODE COMPLETE
 
-Gate: project opens cleanly and a playable scene can be generated.
+- [x] Unity project skeleton and Git-friendly layout
+- [x] Runtime-generated playable scene/bootstrap
+- [x] Data-driven character, team and skill/profile definitions
+- [x] Modular gameplay folders and architecture documentation
+- [x] Save/version migration framework
+- [x] Static repository validator
+- [x] Unity editor project-data validator
+- [ ] Unity import/compile verification on a machine with Unity Editor
 
-## Phase 1 — Volleyball Sandbox
+Gate remaining: open/import cleanly and run project validator in Unity.
 
-- [x] Court and net placeholders
-- [x] Player movement
-- [x] Jump
-- [x] Ball Rigidbody wrapper
-- [x] Basic contextual contact
-- [x] Local ball ownership / last touch
+## Phase 1 — Volleyball Physics — CODE COMPLETE / TUNING REQUIRED
+
+- [x] Court, net and boundaries
+- [x] Player movement and jump
+- [x] Rigidbody ball wrapper
 - [x] Trajectory prediction
-- [ ] Tuned serve physics
-- [ ] Tuned spike physics
-- [ ] Float/topspin/spin model
+- [x] Ballistic receive/set targeting
+- [x] Serve / receive / set / spike / block / dig contacts
+- [x] Float-serve/topspin/southpaw/flexible-wrist spin hooks
+- [x] Directional spike control
+- [x] Early / Good / Perfect / Late contact timing
+- [ ] Device/playtest tuning for serve, receive and spike feel
+- [ ] Final physics/balance constants after repeated Play Mode sessions
 
-Gate: simply hitting the ball across the net is satisfying.
+## Phase 2 — Rally Core — CODE COMPLETE
 
-## Phase 2 — Rally Core
+- [x] 6v6 formation
+- [x] Arcade 3v3 formation using same core
+- [x] Rally lifecycle/reset
+- [x] contextual and explicit controls
+- [x] setter targeting and attacker selection
+- [x] spike direction aiming
+- [x] block timing
+- [x] receive/dig actions
+- [x] manual human serving
+- [x] match and set scoring
+- [ ] soak-test repeated rallies in Unity for soft locks
 
-- [x] Basic 6v6 placeholder formation
-- [x] Simple local AI
-- [x] Point detection
-- [x] Rally reset
-- [x] Prototype scoring
-- [ ] Explicit receive state
-- [ ] Setter targeting
-- [ ] Approach timing
-- [ ] Spike direction aiming
-- [ ] Block timing
-- [ ] Dig/pancake states
+## Phase 3 — Volleyball Rules — CODE COMPLETE / RUNTIME VERIFICATION REQUIRED
 
-Gate: repeated rallies do not soft-lock and controls are understandable.
+- [x] three-contact enforcement
+- [x] block excluded from contact count
+- [x] double-contact fault
+- [x] four-contact fault
+- [x] side-out rotation
+- [x] service order
+- [x] front/back-row representation
+- [x] back-row attack fault
+- [x] libero replacement
+- [x] libero attack-height restriction
+- [x] libero excluded from prototype service slot
+- [x] best-of-three 25/25/15 scoring
+- [x] 3v3 ↔ 6v6 format switching
+- [ ] net-touch fault (requires reliable player/net collider production setup)
+- [ ] general substitution UI beyond automatic libero replacement
+- [ ] Play Mode regression through multiple rotations and format switches
 
-## Phase 3 — Full Volleyball Rules
+## Phase 4 — AI — FUNCTIONAL ALPHA COMPLETE
 
-- [ ] 3-contact enforcement
-- [ ] Rotation
-- [ ] Front/back row restrictions
-- [ ] Libero replacement
-- [ ] Service order
-- [ ] Net faults
-- [ ] Back-row attack faults
-- [ ] Best-of-3 25/25/15 scoring
-- [ ] Substitution framework
+- [x] trajectory-aware receiver ownership
+- [x] setter decision/targeting
+- [x] attack selection
+- [x] front-row blocking decisions
+- [x] read/guess blocker archetype modifiers
+- [x] role-aware positioning
+- [x] stats/technique affect reaction/decision timing
+- [x] character/team synergy priorities
+- [ ] final named difficulty presets exposed in UI
+- [ ] funnel-defense specialization pass
+- [ ] balance with real playtest telemetry
 
-## Phase 4 — AI
+## Phase 5 — Game Feel / Presentation — FUNCTIONAL ALPHA COMPLETE
 
-- [ ] Team tactical brain
-- [ ] Receiver ownership
-- [ ] Setter decision tree
-- [ ] Attack selection
-- [ ] Read/commit blocking
-- [ ] Funnel defense
-- [ ] Difficulty profiles based on decision quality, not stat cheating
+- [x] keyboard controls
+- [x] mobile touch move/JUMP/ACTION
+- [x] hit-stop with pause ownership protection
+- [x] camera follow and impact punch
+- [x] ball trail
+- [x] PERFECT feedback
+- [x] impact streak VFX
+- [x] procedural hit audio
+- [x] procedural stylized player presentation
+- [x] team palettes
+- [x] procedural arena/crowd/lights
+- [x] last-rally trajectory replay trace
+- [x] match statistics overlay
+- [ ] final animation library
+- [ ] authored facial/celebration animations
+- [ ] authored music/voice/SFX mix
+- [ ] haptics verified on physical Android hardware
 
-## Phase 5 — Game Feel
+## Phase 6 — Character Framework — CODE COMPLETE FOR LAUNCH ROSTER
 
-- [ ] Basic/advanced mobile controls
-- [ ] Controller support
-- [ ] Hit stop
-- [ ] Camera modes
-- [ ] Screen shake
-- [ ] Ball trails
-- [ ] Impact rings
-- [ ] Haptics
-- [ ] Layered volleyball audio
+- [x] 48 runtime character profiles
+- [x] 10-stat model
+- [x] archetype modifiers
+- [x] signature skill IDs/hooks
+- [x] momentum/Flow
+- [x] pair chemistry/synergy
+- [x] school/team presets
+- [x] role-correct support profiles for incomplete canonical sixes
+- [x] custom runtime profile support
+- [ ] final per-character authored models/rigs/animations
+- [ ] complete balance pass after Unity playtesting
 
-Vertical-slice gate: external playtesters should want to replay rallies even with placeholder characters.
+## Phase 7 — Game Modes — CODE COMPLETE FOR OFFLINE ALPHA
 
-## Phase 6 — Character Framework
+- [x] Quick Match 6v6
+- [x] Arcade 3v3
+- [x] Story — 10 chapters, intro/objectives, progression and completion
+- [x] Career — custom player, role choice, training, seasons/weeks
+- [x] Tournament — opponent progression and championship completion
+- [x] Training — live action counters
+- [x] Challenge — objective/progress/reward
+- [x] Dream Team — persistent role-filtered seven-slot builder
+- [x] replay-lite trajectory trace
+- [x] statistics overlay
+- [ ] authored story dialogue/cutscene production
+- [ ] additional challenge variants/content packs
 
-- [ ] Passive/active/reaction/combo/ultimate skill execution
-- [ ] Momentum system
-- [ ] Pair chemistry
-- [ ] Team identity
-- [ ] First 12 distinct characters
+## Phase 8 — Persistence / Localization / Build — CODE COMPLETE / BUILD VALIDATION REQUIRED
 
-## Phase 7+ — Content and Product
+- [x] local JSON save
+- [x] backup/fallback load
+- [x] migration to save v3
+- [x] Story/Tournament/Challenge completion counters
+- [x] persistent Career and Dream Team state
+- [x] VI/EN localization foundation
+- [x] Windows development build command
+- [x] Android development APK build command
+- [x] repository sanity workflow definition
+- [ ] Unity Windows build execution
+- [ ] Unity Android build execution
+- [ ] physical-device install/startup/save test
+- [ ] final full localization pass for every current hard-coded debug/alpha string
 
-- [ ] Final stylized 3D/cel-shaded art direction
-- [ ] 48-character launch target
-- [ ] 8+ teams
-- [ ] 8+ courts
-- [ ] Story campaign
-- [ ] Career
-- [ ] Dream Team
-- [ ] Tournament
-- [ ] Training
-- [ ] Challenge
-- [ ] Replay
-- [ ] VI/EN localization
-- [ ] Android/Windows release pipeline
-- [ ] Performance/QA/balance pass
+## Phase 9 — Commercial Production — EXTERNAL / ASSET / LICENSE GATE
+
+The current repository is a fan-prototype/offline alpha. A commercial store release requires work that cannot be completed purely by gameplay code in this environment:
+
+- [ ] license Haikyuu IP **or** replace Haikyuu names/designs/branding/story with original IP
+- [ ] final production-quality character models/sprites, rigs and signature animations
+- [ ] final courts, menus, icons, splash/store assets and music/audio
+- [ ] accessibility/device UI polish across target aspect ratios
+- [ ] performance profiling and optimization on low/mid/high Android devices
+- [ ] crash/ANR monitoring plan and store compliance work
+- [ ] release signing, package identifiers, privacy/store metadata
+
+## Release Candidate Exit Gate
+
+PR #1 stays draft until all of these pass:
+
+1. Unity import/compile: **0 errors**.
+2. `Haikyuu > Validation > Validate Project Data`: **pass**.
+3. Quick/Story/Career/Tournament/Training/Challenge/DreamTeam/Arcade3v3: **playable without exceptions/soft locks**.
+4. Repeated 3v3 ↔ 6v6 switching: **all correct active players and rotations**.
+5. Libero never serves; pause stays paused through hit-stop.
+6. Save v1/v2 → v3 migration: **progress retained**.
+7. Windows development build launches and completes a match.
+8. Android APK installs on a physical device; touch control usable.
+9. Representative Android device: record FPS/memory and resolve blocking performance issues.
+
+Once the code/runtime gates pass, the repository is a validated offline fan-game alpha. Store/commercial release still depends on the Phase 9 asset/IP/release gates.
