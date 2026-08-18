@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using HaikyuuGame.Core;
@@ -22,6 +23,8 @@ namespace HaikyuuGame.Gameplay.Match
         private TeamSide _servingTeam = TeamSide.Left;
         private bool _rallyActive;
         private bool _resolvingPoint;
+
+        public event Action<TeamSide> MatchCompleted;
 
         public MatchScore Score => _score;
         public TeamPossession Possession => _possession;
@@ -146,6 +149,7 @@ namespace HaikyuuGame.Gameplay.Match
             if (update.MatchWon)
             {
                 _hud.SetMessage($"{update.Winner} wins the match! Restarting...");
+                MatchCompleted?.Invoke(update.Winner);
                 StartCoroutine(RestartMatchAfterDelay());
                 return;
             }

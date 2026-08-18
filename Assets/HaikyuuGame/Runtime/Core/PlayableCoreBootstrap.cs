@@ -8,6 +8,7 @@ using HaikyuuGame.Gameplay.Match;
 using HaikyuuGame.Gameplay.Player;
 using HaikyuuGame.Gameplay.Presentation;
 using HaikyuuGame.Gameplay.UI;
+using HaikyuuGame.Meta;
 using UnityEngine;
 
 namespace HaikyuuGame
@@ -45,12 +46,17 @@ namespace HaikyuuGame
             cameraController.Initialize(camera, ball);
             GameFeelController feel = gameObject.AddComponent<GameFeelController>();
             feel.Initialize(ball, cameraController);
+            ProceduralAudioController audio = gameObject.AddComponent<ProceduralAudioController>();
+            audio.Initialize(ball);
 
             BuildTeams(ball, out TeamRotation leftRotation, out TeamRotation rightRotation);
 
             PlayableCoreHud hud = gameObject.AddComponent<PlayableCoreHud>();
             RallyController rally = gameObject.AddComponent<RallyController>();
             rally.Initialize(ball, _players, _tuning, hud, leftRotation, rightRotation);
+
+            GameShellController shell = gameObject.AddComponent<GameShellController>();
+            shell.Initialize(rally);
         }
 
         private static void BuildLighting()
