@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HaikyuuGame.Core;
 using HaikyuuGame.Gameplay;
+using HaikyuuGame.Gameplay.AI;
 using HaikyuuGame.Gameplay.Ball;
 using HaikyuuGame.Gameplay.Character;
 using HaikyuuGame.Gameplay.Input;
@@ -30,6 +31,7 @@ namespace HaikyuuGame
 
         private void Start()
         {
+            AiDifficultyRuntime.Bind(_tuning);
             BuildLighting();
             Camera camera = BuildCamera();
             BuildCourt();
