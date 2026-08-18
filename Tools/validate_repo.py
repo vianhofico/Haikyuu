@@ -6,16 +6,20 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 required = [
     "Assets/HaikyuuGame/Runtime/Core/PlayableCoreBootstrap.cs",
+    "Assets/HaikyuuGame/Runtime/Gameplay/AI/AiDifficultyRuntime.cs",
     "Assets/HaikyuuGame/Runtime/Gameplay/Match/RallyController.cs",
     "Assets/HaikyuuGame/Runtime/Gameplay/Match/TeamPossession.cs",
     "Assets/HaikyuuGame/Runtime/Gameplay/Match/TeamRotation.cs",
     "Assets/HaikyuuGame/Runtime/Gameplay/Character/HaikyuuRosterCatalog.cs",
+    "Assets/HaikyuuGame/Runtime/Gameplay/Input/TouchInputRouter.cs",
+    "Assets/HaikyuuGame/Runtime/Gameplay/Presentation/RuntimePresentationSettings.cs",
     "Assets/HaikyuuGame/Runtime/Persistence/SaveGameService.cs",
     "Assets/HaikyuuGame/Runtime/Story/StoryCampaignCatalog.cs",
     "Assets/HaikyuuGame/Runtime/Story/StoryPresentationController.cs",
     "Assets/HaikyuuGame/Runtime/Career/CareerService.cs",
     "Assets/HaikyuuGame/Runtime/Career/CareerProfileFactory.cs",
     "Assets/HaikyuuGame/Runtime/Meta/DreamTeamService.cs",
+    "Assets/HaikyuuGame/Runtime/Meta/RuntimeSettingsOverlay.cs",
     "Assets/HaikyuuGame/Runtime/Progression/CompletionProgressController.cs",
     "Assets/HaikyuuGame/Runtime/Training/ChallengeController.cs",
     "Assets/HaikyuuGame/Runtime/Gameplay/Presentation/RallyReplayTrace.cs",
@@ -51,8 +55,8 @@ if manifest.exists():
 save_service = ROOT / "Assets/HaikyuuGame/Runtime/Persistence/SaveGameService.cs"
 if save_service.exists():
     text = save_service.read_text(encoding="utf-8")
-    if "CurrentVersion = 3" not in text:
-        errors.append("save service is not pinned to version 3")
+    if "CurrentVersion = 4" not in text:
+        errors.append("save service is not pinned to version 4")
 
 mode_file = ROOT / "Assets/HaikyuuGame/Runtime/Meta/GameMode.cs"
 if mode_file.exists() and "Arcade3v3" not in mode_file.read_text(encoding="utf-8"):
@@ -78,6 +82,28 @@ if rally_file.exists():
     for required_snippet in ("Back-row attack fault", "Libero illegal attack", "SetPlayersPerSide"):
         if required_snippet not in rally:
             errors.append(f"RallyController missing required rule/format hook: {required_snippet}")
+
+ai_file = ROOT / "Assets/HaikyuuGame/Runtime/Gameplay/AI/AiDifficultyRuntime.cs"
+if ai_file.exists():
+    ai = ai_file.read_text(encoding="utf-8")
+    for name in ("Rookie", "Normal", "Advanced", "Elite", "National", "Legend"):
+        if name not in ai:
+            errors.append(f"AI difficulty missing profile: {name}")
+    if "Bind(VolleyballTuning tuning)" not in ai:
+        errors.append("AI difficulty is not bound to runtime tuning")
+
+settings_overlay = ROOT / "Assets/HaikyuuGame/Runtime/Meta/RuntimeSettingsOverlay.cs"
+if settings_overlay.exists():
+    settings = settings_overlay.read_text(encoding="utf-8")
+    for hook in ("screenShake", "reducedCinematics", "masterVolume", "sfxVolume", "aiDifficulty"):
+        if hook not in settings:
+            errors.append(f"runtime settings overlay missing: {hook}")
+
+gamepad_file = ROOT / "Assets/HaikyuuGame/Runtime/Gameplay/Input/TouchInputRouter.cs"
+if gamepad_file.exists():
+    gamepad = gamepad_file.read_text(encoding="utf-8")
+    if "JoystickButton0" not in gamepad or "JoystickButton1" not in gamepad:
+        errors.append("basic gamepad jump/context bridge is missing")
 
 for path in (ROOT / "Assets/HaikyuuGame").rglob("*.cs"):
     text = path.read_text(encoding="utf-8")
