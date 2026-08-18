@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using HaikyuuGame.Core;
 using HaikyuuGame.Gameplay.Ball;
+using HaikyuuGame.Gameplay.Character;
+using HaikyuuGame.Gameplay.Input;
 using HaikyuuGame.Gameplay.Match;
 using UnityEngine;
 
@@ -22,9 +24,14 @@ namespace HaikyuuGame.Gameplay.Player
         public TeamSide Team { get; private set; }
         public bool IsHuman { get; private set; }
         public VolleyballRole BaseRole { get; private set; }
+        public RuntimeCharacterProfile Profile { get; private set; }
         public int CourtSlot { get; private set; } = -1;
         public bool IsFrontRow => CourtSlot >= 0 && CourtSlot <= 2;
         public Vector3 HomePosition => _homePosition;
+        public string DisplayName => Profile != null ? Profile.DisplayName : BaseRole.ToString();
+
+        private CharacterStats Stats => Profile != null ? Profile.Stats : CharacterStats.Default;
+        private CharacterArchetype Archetype => Profile != null ? Profile.Archetype : CharacterArchetype.AllRounder;
 
         private void OnEnable()
         {
@@ -42,14 +49,15 @@ namespace HaikyuuGame.Gameplay.Player
         public void Initialize(
             TeamSide team,
             bool isHuman,
-            VolleyballRole role,
+            RuntimeCharacterProfile profile,
             Vector3 homePosition,
             VolleyballBall ball,
             VolleyballTuning tuning)
         {
             Team = team;
             IsHuman = isHuman;
-            BaseRole = role;
+            Profile = profile;
+            BaseRole = profile != null ? profile.Role : VolleyballRole.OutsideHitter;
             _homePosition = homePosition;
             _ball = ball;
             _tuning = tuning;
@@ -102,31 +110,41 @@ namespace HaikyuuGame.Gameplay.Player
 
         private void TickHuman()
         {
-            float x = Input.GetAxisRaw("Horizontal");
-            float z = Input.GetAxisRaw("Vertical");
+            float x = UnityEngine.Input.GetAxisRaw("Horizontal");
+            float z = UnityEngine.Input.GetAxisRaw("Vertical");
+            TouchInputRouter touch = TouchInputRouter.Instance;
+
+            if (touch != null && touch.Move.sqrMagnitude > 0.01f)
+            {
+                x = touch.Move.x;
+                z = touch.Move.y;
+            }
+
             Vector3 move = new Vector3(x, 0f, z).normalized;
             _lastMoveInput = move;
 
-            bool jump = Input.GetKeyDown(KeyCode.Space);
+            bool jump = UnityEngine.Input.GetKeyDown(KeyCode.Space) || (touch != null && touch.ConsumeJump());
             TickMovement(move, jump);
 
-            if (Input.GetKeyDown(KeyCode.Z))
+            if (UnityEngine.Input.GetKeyDown(KeyCode.Z))
             {
                 TryPerform(BallContactType.Receive);
             }
-            else if (Input.GetKeyDown(KeyCode.X))
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.X))
             {
                 TryPerform(BallContactType.Set);
             }
-            else if (Input.GetKeyDown(KeyCode.C))
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.C))
             {
                 TryPerform(BallContactType.Attack);
             }
-            else if (Input.GetKeyDown(KeyCode.V))
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.V))
             {
                 TryPerform(BallContactType.Block);
             }
-            else if (Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.J))
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.F)
+                || UnityEngine.Input.GetKeyDown(KeyCode.J)
+                || (touch != null && touch.ConsumeContextAction()))
             {
                 TryPerform(ChooseContextAction());
             }
@@ -138,10 +156,11 @@ namespace HaikyuuGame.Gameplay.Player
             Vector3 landing = BallTrajectoryPredictor.EstimateLandingPoint(_ball);
             bool ballOnMyHalf = Team == TeamSide.Left ? landing.x < -0.1f : landing.x > 0.1f;
             bool opponentPossession = _rally.Possession.Team != Team;
+            float blockReadRange = Archetype == CharacterArchetype.ReadBlocker || Archetype == CharacterArchetype.GuessBlocker ? 2.1f : 1.7f;
             bool blockOpportunity = IsFrontRow
                 && opponentPossession
-                && Mathf.Abs(_ball.transform.position.x) < 1.7f
-                && _ball.transform.position.y > 1.8f;
+                && Mathf.Abs(_ball.transform.position.x) < blockReadRange
+                && _ball.transform.position.y > 1.75f;
 
             bool isSetterTurn = _rally.Possession.Team == Team
                 && _rally.Possession.CountedTouches == 1
@@ -180,9 +199,9 @@ namespace HaikyuuGame.Gameplay.Player
             Vector3 move = delta.sqrMagnitude > 0.05f ? delta.normalized : Vector3.zero;
             _lastMoveInput = move;
 
-            bool nearBall = Vector3.Distance(transform.position + Vector3.up * 0.8f, _ball.transform.position) <= _tuning.actionReach;
+            bool nearBall = Vector3.Distance(transform.position + Vector3.up * 0.8f, _ball.transform.position) <= GetActionReach(ChooseContextAction());
             bool shouldJump = nearBall
-                && _ball.transform.position.y > 1.7f
+                && _ball.transform.position.y > 1.65f
                 && (blockOpportunity || isAttackTurn)
                 && Time.time >= _nextAiDecisionTime;
 
@@ -190,7 +209,9 @@ namespace HaikyuuGame.Gameplay.Player
 
             if (nearBall && Time.time >= _nextAiDecisionTime)
             {
-                _nextAiDecisionTime = Time.time + Random.Range(_tuning.aiDecisionMin, _tuning.aiDecisionMax);
+                float technique = Mathf.Clamp01(Stats.technique / 100f);
+                float reactionScale = Mathf.Lerp(1.14f, 0.72f, technique);
+                _nextAiDecisionTime = Time.time + Random.Range(_tuning.aiDecisionMin, _tuning.aiDecisionMax) * reactionScale;
                 TryPerform(ChooseContextAction());
             }
         }
@@ -245,13 +266,14 @@ namespace HaikyuuGame.Gameplay.Player
 
             if (grounded && jumpRequested)
             {
-                _verticalVelocity = _tuning.jumpVelocity;
+                _verticalVelocity = _tuning.jumpVelocity * StatScale(Stats.jump) * ArchetypeModifiers.Jump(Archetype);
             }
 
             _verticalVelocity += Physics.gravity.y * Time.deltaTime;
 
             Vector3 next = transform.position;
-            next += move * (_tuning.moveSpeed * Time.deltaTime);
+            float moveSpeed = _tuning.moveSpeed * StatScale(Stats.speed) * ArchetypeModifiers.Move(Archetype);
+            next += move * (moveSpeed * Time.deltaTime);
             next.y += _verticalVelocity * Time.deltaTime;
 
             float minX = Team == TeamSide.Left ? -8.35f : 0.6f;
@@ -269,7 +291,7 @@ namespace HaikyuuGame.Gameplay.Player
             bool nearNet = Mathf.Abs(transform.position.x) < 2.0f;
             bool opponentLastTouch = _ball.LastTouchTeam != Team && _ball.LastTouchTeam != TeamSide.None;
 
-            if (opponentLastTouch && nearNet && IsFrontRow && airborne && _ball.transform.position.y > 1.8f)
+            if (opponentLastTouch && nearNet && IsFrontRow && airborne && _ball.transform.position.y > 1.75f)
             {
                 return BallContactType.Block;
             }
@@ -278,7 +300,7 @@ namespace HaikyuuGame.Gameplay.Player
             {
                 if (_rally.Possession.CountedTouches == 1)
                 {
-                    return BaseRole == VolleyballRole.Setter ? BallContactType.Set : BallContactType.Set;
+                    return BallContactType.Set;
                 }
 
                 if (_rally.Possession.CountedTouches >= 2)
@@ -299,7 +321,7 @@ namespace HaikyuuGame.Gameplay.Player
 
             Vector3 contactOrigin = transform.position + Vector3.up * 0.75f;
             Vector3 toBall = _ball.transform.position - contactOrigin;
-            if (toBall.magnitude > _tuning.actionReach)
+            if (toBall.magnitude > GetActionReach(action))
             {
                 return;
             }
@@ -333,7 +355,8 @@ namespace HaikyuuGame.Gameplay.Player
                 ? setter.transform.position + Vector3.up * _tuning.receiveTargetHeight
                 : new Vector3(Team == TeamSide.Left ? -2.3f : 2.3f, 2.3f, 0f);
 
-            float flightTime = dig ? _tuning.digFlightTime : _tuning.receiveFlightTime;
+            float quality = Mathf.Lerp(0.92f, 1.08f, Stats.receive / 100f);
+            float flightTime = (dig ? _tuning.digFlightTime : _tuning.receiveFlightTime) / quality;
             Vector3 velocity = BallTrajectoryPredictor.SolveBallisticVelocity(_ball.transform.position, target, flightTime);
             _ball.Contact(
                 Team,
@@ -351,8 +374,9 @@ namespace HaikyuuGame.Gameplay.Player
                 ? attacker.transform.position + Vector3.up * _tuning.setTargetHeight + new Vector3(attackDirection * 0.35f, 0f, 0f)
                 : new Vector3(Team == TeamSide.Left ? -1.6f : 1.6f, _tuning.setTargetHeight, 0f);
 
-            bool quick = attacker != null && attacker.BaseRole == VolleyballRole.MiddleBlocker;
-            float flightTime = quick ? _tuning.quickSetFlightTime : _tuning.setFlightTime;
+            bool quick = attacker != null && (attacker.BaseRole == VolleyballRole.MiddleBlocker || attacker.ArchetypeIs(CharacterArchetype.SpeedDecoy));
+            float control = StatScale(Stats.set) * ArchetypeModifiers.SetControl(Archetype);
+            float flightTime = (quick ? _tuning.quickSetFlightTime : _tuning.setFlightTime) / Mathf.Clamp(control, 0.86f, 1.16f);
             Vector3 velocity = BallTrajectoryPredictor.SolveBallisticVelocity(_ball.transform.position, target, flightTime);
             _ball.Contact(Team, this, BallContactType.Set, velocity, Vector3.zero);
         }
@@ -360,17 +384,20 @@ namespace HaikyuuGame.Gameplay.Player
         private void PerformAttack()
         {
             float attackDirection = Team == TeamSide.Left ? 1f : -1f;
+            float technique = Stats.technique / 100f;
+            float aimRange = Mathf.Lerp(2.2f, 3.6f, technique);
             float aimZ = IsHuman
-                ? Mathf.Clamp(_lastMoveInput.z * 3.2f, -3.2f, 3.2f)
-                : Mathf.Clamp(-transform.position.z * 0.45f, -2.8f, 2.8f);
+                ? Mathf.Clamp(_lastMoveInput.z * aimRange, -aimRange, aimRange)
+                : Mathf.Clamp(-transform.position.z * 0.45f, -aimRange, aimRange);
 
             float downSpeed = _ball.transform.position.y > _tuning.netHeight
                 ? -_tuning.spikeDownSpeed
                 : -1.2f;
 
+            float attackMultiplier = StatScale(Stats.attack) * ArchetypeModifiers.Attack(Archetype);
             Vector3 velocity = new Vector3(
-                attackDirection * _tuning.spikeForwardSpeed,
-                downSpeed,
+                attackDirection * _tuning.spikeForwardSpeed * attackMultiplier,
+                downSpeed * Mathf.Lerp(0.9f, 1.08f, technique),
                 aimZ);
 
             _ball.Contact(
@@ -385,8 +412,9 @@ namespace HaikyuuGame.Gameplay.Player
         {
             float attackDirection = Team == TeamSide.Left ? 1f : -1f;
             Vector3 incoming = _ball.Body.linearVelocity;
+            float blockMultiplier = StatScale(Stats.block) * ArchetypeModifiers.Block(Archetype);
             Vector3 velocity = new Vector3(
-                attackDirection * Mathf.Max(_tuning.blockForwardSpeed, Mathf.Abs(incoming.x) * 0.72f),
+                attackDirection * Mathf.Max(_tuning.blockForwardSpeed, Mathf.Abs(incoming.x) * 0.72f) * blockMultiplier,
                 _tuning.blockUpSpeed,
                 -incoming.z * 0.35f);
 
@@ -410,7 +438,18 @@ namespace HaikyuuGame.Gameplay.Player
                     continue;
                 }
 
-                float score = candidate.BaseRole == VolleyballRole.MiddleBlocker ? 2.0f : 1.0f;
+                float attackStat = candidate.Profile != null ? candidate.Profile.Stats.attack : 50f;
+                float score = attackStat * 0.02f;
+                if (candidate.BaseRole == VolleyballRole.MiddleBlocker)
+                {
+                    score += 0.7f;
+                }
+
+                if (candidate.ArchetypeIs(CharacterArchetype.SpeedDecoy))
+                {
+                    score += 0.5f;
+                }
+
                 score -= Mathf.Abs(candidate.transform.position.z - transform.position.z) * 0.04f;
 
                 if (score > bestScore)
@@ -450,6 +489,32 @@ namespace HaikyuuGame.Gameplay.Player
             }
 
             return best;
+        }
+
+        private float GetActionReach(BallContactType action)
+        {
+            float reach = _tuning.actionReach * Mathf.Lerp(0.94f, 1.08f, Stats.technique / 100f);
+
+            if (action == BallContactType.Receive || action == BallContactType.Dig)
+            {
+                reach *= ArchetypeModifiers.ReceiveReach(Archetype);
+            }
+            else if (action == BallContactType.Block)
+            {
+                reach *= ArchetypeModifiers.Block(Archetype);
+            }
+
+            return reach;
+        }
+
+        private bool ArchetypeIs(CharacterArchetype archetype)
+        {
+            return Archetype == archetype;
+        }
+
+        private static float StatScale(int stat)
+        {
+            return Mathf.Lerp(0.86f, 1.14f, Mathf.Clamp01((stat - 1f) / 99f));
         }
     }
 }

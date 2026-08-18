@@ -11,6 +11,15 @@ namespace HaikyuuGame.Gameplay.Character
         StrategistSetter = 6,
         MomentumAce = 7,
         FloatServer = 8,
-        TechnicalAce = 9
+        TechnicalAce = 9,
+        TeamAmplifierSetter = 10,
+        GuessBlocker = 11,
+        PowerBlocker = 12,
+        DualServerSetter = 13,
+        FlexibleHitter = 14,
+        ReliableCaptain = 15,
+        HighReach = 16,
+        EnergySaver = 17,
+        WildCard = 18
     }
 }

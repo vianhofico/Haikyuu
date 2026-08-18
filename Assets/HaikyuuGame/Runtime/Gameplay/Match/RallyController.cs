@@ -27,6 +27,7 @@ namespace HaikyuuGame.Gameplay.Match
         public TeamPossession Possession => _possession;
         public TeamSide ServingTeam => _servingTeam;
         public bool RallyActive => _rallyActive;
+        public PlayerActor HumanPlayer { get; private set; }
 
         public void Initialize(
             VolleyballBall ball,
@@ -46,6 +47,10 @@ namespace HaikyuuGame.Gameplay.Match
             for (int i = 0; i < _players.Count; i++)
             {
                 _players[i].BindMatch(this);
+                if (_players[i].IsHuman)
+                {
+                    HumanPlayer = _players[i];
+                }
             }
 
             _ball.Contacted += OnBallContact;
@@ -68,7 +73,7 @@ namespace HaikyuuGame.Gameplay.Match
                 return;
             }
 
-            if (Input.GetKeyDown(KeyCode.R))
+            if (UnityEngine.Input.GetKeyDown(KeyCode.R))
             {
                 StartNewRally();
                 return;
@@ -103,7 +108,7 @@ namespace HaikyuuGame.Gameplay.Match
             }
 
             PossessionUpdate update = _possession.Register(contact);
-            string actor = contact.Player != null ? contact.Player.BaseRole.ToString() : "Server";
+            string actor = contact.Player != null ? contact.Player.DisplayName : "Server";
             _hud.SetMessage($"{contact.Team} {actor}: {contact.Type} | touches {_possession.CountedTouches}/3");
 
             if (update.Fault)
