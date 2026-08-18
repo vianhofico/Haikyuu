@@ -8,6 +8,7 @@ namespace HaikyuuGame.Meta
         Tournament = 3,
         Training = 4,
         Challenge = 5,
-        DreamTeam = 6
+        DreamTeam = 6,
+        Arcade3v3 = 7
     }
 }
