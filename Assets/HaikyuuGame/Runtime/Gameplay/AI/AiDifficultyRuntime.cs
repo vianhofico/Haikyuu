@@ -14,6 +14,7 @@ namespace HaikyuuGame.Gameplay.AI
     {
         private const float BaseDecisionMin = 0.16f;
         private const float BaseDecisionMax = 0.34f;
+        private static VolleyballTuning _activeTuning;
 
         public static AiDifficulty Current { get; private set; } = AiDifficulty.Normal;
 
@@ -49,9 +50,16 @@ namespace HaikyuuGame.Gameplay.AI
             }
         }
 
+        public static void Bind(VolleyballTuning tuning)
+        {
+            _activeTuning = tuning;
+            ApplyTo(_activeTuning);
+        }
+
         public static void Set(AiDifficulty difficulty)
         {
             Current = difficulty;
+            ApplyTo(_activeTuning);
         }
 
         public static void SetFromInt(int value)
@@ -59,12 +67,14 @@ namespace HaikyuuGame.Gameplay.AI
             if (value < 0) value = 0;
             if (value > 5) value = 5;
             Current = (AiDifficulty)value;
+            ApplyTo(_activeTuning);
         }
 
         public static AiDifficulty Cycle()
         {
             int next = ((int)Current + 1) % 6;
             Current = (AiDifficulty)next;
+            ApplyTo(_activeTuning);
             return Current;
         }
 
