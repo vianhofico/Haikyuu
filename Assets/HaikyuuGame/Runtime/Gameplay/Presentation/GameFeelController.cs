@@ -63,8 +63,11 @@ namespace HaikyuuGame.Gameplay.Presentation
                 RestoreTimeScaleIfOwned();
             }
 
-            // Do not start hit-stop while another system (menu/pause) already
-            // owns a zero timeScale.
+            if (RuntimePresentationSettings.ReducedCinematics)
+            {
+                return;
+            }
+
             if (Time.timeScale <= 0.0001f)
             {
                 return;
@@ -93,8 +96,6 @@ namespace HaikyuuGame.Gameplay.Presentation
                 return;
             }
 
-            // If another system changed timeScale while hit-stop was active
-            // (notably the pause menu setting it to 0), leave that value alone.
             if (Mathf.Abs(Time.timeScale - _ownedScale) <= 0.0001f)
             {
                 Time.timeScale = _restoreScale;
