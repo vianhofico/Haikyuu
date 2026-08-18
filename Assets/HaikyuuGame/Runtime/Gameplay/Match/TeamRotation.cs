@@ -14,22 +14,16 @@ namespace HaikyuuGame.Gameplay.Match
         private readonly Vector3[] _slotPositions;
         private int _rotationOffset;
 
-        public TeamRotation(
-            TeamSide team,
-            IReadOnlyList<PlayerActor> sixPlayerRoster,
-            PlayerActor libero,
-            IReadOnlyList<Vector3> slotPositions)
+        public TeamRotation(TeamSide team, IReadOnlyList<PlayerActor> sixPlayerRoster, PlayerActor libero, IReadOnlyList<Vector3> slotPositions)
         {
             _team = team;
             _roster = new PlayerActor[6];
             _slotPositions = new Vector3[6];
-
             for (int i = 0; i < 6; i++)
             {
                 _roster[i] = sixPlayerRoster[i];
                 _slotPositions[i] = slotPositions[i];
             }
-
             _libero = libero;
             RefreshCourtAssignments();
         }
@@ -55,27 +49,24 @@ namespace HaikyuuGame.Gameplay.Match
             RefreshCourtAssignments();
         }
 
+        public void RefreshAssignments()
+        {
+            RefreshCourtAssignments();
+        }
+
         public void ResetPlayersToHome()
         {
             for (int i = 0; i < _roster.Length; i++)
             {
-                if (_roster[i].gameObject.activeSelf)
-                {
-                    _roster[i].ResetToHome();
-                }
+                if (_roster[i].gameObject.activeSelf) _roster[i].ResetToHome();
             }
-
-            if (_libero != null && _libero.gameObject.activeSelf)
-            {
-                _libero.ResetToHome();
-            }
+            if (_libero != null && _libero.gameObject.activeSelf) _libero.ResetToHome();
         }
 
         private void RefreshCourtAssignments()
         {
             int liberoSlot = -1;
             PlayerActor replacedMiddle = null;
-
             for (int slot = 3; slot < 6; slot++)
             {
                 PlayerActor occupant = GetOccupant(slot);
@@ -117,9 +108,7 @@ namespace HaikyuuGame.Gameplay.Match
 
         private Vector3 HiddenPosition()
         {
-            return _team == TeamSide.Left
-                ? new Vector3(-12f, 1f, 0f)
-                : new Vector3(12f, 1f, 0f);
+            return _team == TeamSide.Left ? new Vector3(-12f, 1f, 0f) : new Vector3(12f, 1f, 0f);
         }
     }
 }

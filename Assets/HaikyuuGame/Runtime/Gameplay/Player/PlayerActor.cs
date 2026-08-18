@@ -46,12 +46,22 @@ namespace HaikyuuGame.Gameplay.Player
         {
             Team = team;
             IsHuman = isHuman;
-            Profile = profile;
-            BaseRole = profile != null ? profile.Role : VolleyballRole.OutsideHitter;
             _homePosition = homePosition;
             _ball = ball;
             _tuning = tuning;
+            AssignProfile(profile);
             ResetToHome();
+        }
+
+        public void AssignProfile(RuntimeCharacterProfile profile)
+        {
+            Profile = profile;
+            BaseRole = profile != null ? profile.Role : VolleyballRole.OutsideHitter;
+            if (profile != null)
+            {
+                string prefix = IsHuman ? "Player_Human" : $"Player_{Team}";
+                gameObject.name = $"{prefix}_{profile.DisplayName.Replace(" ", "_")}";
+            }
         }
 
         public void BindMatch(RallyController rally)

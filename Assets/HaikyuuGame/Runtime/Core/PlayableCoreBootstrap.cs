@@ -7,6 +7,7 @@ using HaikyuuGame.Gameplay.Input;
 using HaikyuuGame.Gameplay.Match;
 using HaikyuuGame.Gameplay.Player;
 using HaikyuuGame.Gameplay.Presentation;
+using HaikyuuGame.Gameplay.Teams;
 using HaikyuuGame.Gameplay.UI;
 using HaikyuuGame.Meta;
 using HaikyuuGame.Training;
@@ -33,7 +34,6 @@ namespace HaikyuuGame
             Camera camera = BuildCamera();
             BuildCourt();
             VolleyballBall ball = BuildBall();
-
             if (FindFirstObjectByType<TouchInputRouter>() == null) gameObject.AddComponent<TouchInputRouter>();
 
             MatchCameraController cameraController = gameObject.AddComponent<MatchCameraController>();
@@ -142,6 +142,7 @@ namespace HaikyuuGame
             PlayerActor rightLibero = CreatePlayer(TeamSide.Right, false, HaikyuuRosterCatalog.Get("akagi_michinari"), new Vector3(12f, 1f, 0f), ball);
             leftRotation = new TeamRotation(TeamSide.Left, leftRoster, leftLibero, leftFormation);
             rightRotation = new TeamRotation(TeamSide.Right, rightRoster, rightLibero, rightFormation);
+            new MatchRosterController(leftRoster, rightRoster, leftLibero, rightLibero, leftRotation, rightRotation);
         }
 
         private static Vector3[] CreateFormation(TeamSide team)
