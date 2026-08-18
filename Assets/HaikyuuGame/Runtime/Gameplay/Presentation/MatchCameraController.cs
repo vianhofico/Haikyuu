@@ -21,6 +21,11 @@ namespace HaikyuuGame.Gameplay.Presentation
 
         public void Punch(float strength)
         {
+            if (!RuntimePresentationSettings.ScreenShake)
+            {
+                return;
+            }
+
             _shake = Mathf.Max(_shake, strength);
         }
 
@@ -36,7 +41,14 @@ namespace HaikyuuGame.Gameplay.Presentation
                 Mathf.Clamp((_ball.transform.position.y - 2f) * 0.09f, -0.2f, 0.5f),
                 0f);
 
-            Vector3 shakeOffset = Random.insideUnitSphere * _shake;
+            if (!RuntimePresentationSettings.ScreenShake)
+            {
+                _shake = 0f;
+            }
+
+            Vector3 shakeOffset = RuntimePresentationSettings.ScreenShake
+                ? UnityEngine.Random.insideUnitSphere * _shake
+                : Vector3.zero;
             Vector3 target = _basePosition + followOffset + shakeOffset;
             _camera.transform.position = Vector3.Lerp(_camera.transform.position, target, Time.unscaledDeltaTime * 10f);
             _camera.transform.rotation = _baseRotation;
