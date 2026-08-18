@@ -71,9 +71,9 @@ namespace HaikyuuGame.Editor
                 throw new InvalidOperationException($"Expected 10 story chapters, found {StoryCampaignCatalog.All.Count}.");
             }
 
-            if (SaveGameService.CurrentVersion != 2)
+            if (SaveGameService.CurrentVersion != 3)
             {
-                throw new InvalidOperationException($"Expected save version 2, found {SaveGameService.CurrentVersion}.");
+                throw new InvalidOperationException($"Expected save version 3, found {SaveGameService.CurrentVersion}.");
             }
 
             SaveGameData defaultSave = SaveGameData.CreateDefault();
