@@ -2,7 +2,9 @@
 using System;
 using System.Collections.Generic;
 using HaikyuuGame.Career;
+using HaikyuuGame.Gameplay.AI;
 using HaikyuuGame.Gameplay.Character;
+using HaikyuuGame.Gameplay.Presentation;
 using HaikyuuGame.Gameplay.Teams;
 using HaikyuuGame.Meta;
 using HaikyuuGame.Persistence;
@@ -71,9 +73,9 @@ namespace HaikyuuGame.Editor
                 throw new InvalidOperationException($"Expected 10 story chapters, found {StoryCampaignCatalog.All.Count}.");
             }
 
-            if (SaveGameService.CurrentVersion != 3)
+            if (SaveGameService.CurrentVersion != 4)
             {
-                throw new InvalidOperationException($"Expected save version 3, found {SaveGameService.CurrentVersion}.");
+                throw new InvalidOperationException($"Expected save version 4, found {SaveGameService.CurrentVersion}.");
             }
 
             SaveGameData defaultSave = SaveGameData.CreateDefault();
@@ -103,6 +105,18 @@ namespace HaikyuuGame.Editor
             {
                 throw new InvalidOperationException($"Expected 8 game modes, found {gameModeCount}.");
             }
+
+            if (Enum.GetValues(typeof(AiDifficulty)).Length != 6)
+            {
+                throw new InvalidOperationException("Expected six AI difficulty profiles.");
+            }
+
+            if (defaultSave.settings == null || defaultSave.settings.aiDifficulty != 1)
+            {
+                throw new InvalidOperationException("Default AI difficulty must be Normal (1).");
+            }
+
+            RuntimePresentationSettings.Apply(defaultSave.settings);
 
             Debug.Log(
                 $"Project validation passed: {roster.Count} playable characters, {schools.Count} schools/groups, "
