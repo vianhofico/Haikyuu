@@ -19,6 +19,7 @@ Offline-first anime volleyball fan prototype built with Unity 6 + C#. The volley
 - Early / Good / Perfect / Late timing grades affecting control and power
 - trajectory prediction and ballistic receive/set targeting
 - local role-aware AI for receivers, setters, attackers and blockers
+- six AI difficulty profiles: Rookie, Normal, Advanced, Elite, National and Legend
 - Flow/momentum system
 - character archetypes, signature modifiers and pair synergy
 
@@ -42,10 +43,11 @@ Offline-first anime volleyball fan prototype built with Unity 6 + C#. The volley
 
 ### Meta and presentation
 
-- versioned local JSON save (**v3**) with backup/fallback migration
+- versioned local JSON save (**v4**) with backup/fallback migration
 - XP, coins, wins, unlock progression and completion counters
 - Vietnamese and English localization foundation
-- keyboard and mobile touch controls
+- keyboard, basic gamepad and mobile touch controls
+- runtime settings overlay with AI difficulty, screen shake, reduced cinematics, master volume and SFX volume
 - procedural hit sounds; no paid audio assets required for this prototype
 - camera tracking/punch, pause-safe anime hit-stop, ball trail, PERFECT feedback and impact streak VFX
 - stylized procedural player visuals, team palettes, arena stands/crowd/lights
@@ -78,11 +80,22 @@ Offline-first anime volleyball fan prototype built with Unity 6 + C#. The volley
 | M / Esc | Mode menu / resume |
 | L | Toggle VI / EN |
 | F2 | Match statistics |
+| F10 | Runtime settings |
 | P | Last-rally trajectory replay |
 | 1–7 in Career menu | Train Attack / Serve / Set / Receive / Block / Jump / Speed |
 | Tab in Career menu | Change Career role |
 
-On mobile the prototype provides a movement touch area plus **JUMP** and **ACTION** zones.
+Basic gamepad support uses the legacy Horizontal/Vertical axes; button 0 is **Jump** and buttons 1/2 feed the contextual **Action/Serve** input. On mobile the prototype provides a movement touch area plus **JUMP** and **ACTION** zones.
+
+## Runtime settings
+
+Press `F10` to open the settings overlay. The following settings are wired to runtime systems and persisted in save v4:
+
+- AI Difficulty — changes local AI decision timing immediately
+- Screen Shake — enables/disables camera impact shake
+- Reduced Cinematics — disables gameplay hit-stop/slow-motion
+- Master Volume
+- SFX Volume
 
 ## Mode notes
 
@@ -124,6 +137,9 @@ PlayerActor -> Stats/Archetype -> TeamMomentum
      |                |
      v                v
 AI decision       CharacterSynergy
+     |
+     v
+AiDifficultyRuntime -> VolleyballTuning
 
 GameSessionState -> ModeMatchupDirector -> MatchRosterController
        |                    |                     |
@@ -131,7 +147,8 @@ GameSessionState -> ModeMatchupDirector -> MatchRosterController
 Story/Career         TeamPreset             Custom Lineups
 DreamTeam/3v3        Progression             Runtime Profiles
 
-SaveGameService -> XP / Career / Dream Team / Story / Tournament / Challenge
+SaveGameService -> XP / Career / Dream Team / Story / Tournament / Challenge / Settings
+RuntimePresentationSettings -> Camera / Hit-stop / Audio
 ```
 
 ## Repository layout
@@ -141,6 +158,7 @@ Assets/HaikyuuGame/
   Runtime/
     Core/
     Gameplay/
+      AI/
       Ball/
       Character/
       Input/
@@ -172,9 +190,11 @@ The codebase is at a feature-complete offline-alpha/release-candidate stage, **n
 - Unity import/compile with no errors
 - `Haikyuu > Validation > Validate Project Data`
 - Play Mode regression across all eight modes
+- AI difficulty/settings persistence and immediate runtime application
+- keyboard/gamepad/touch input regression
 - repeated 3v3 ↔ 6v6 switching and rotations
 - libero/service-slot and hit-stop/menu-pause regression
-- save v1/v2 → v3 migration validation
+- save v1/v2/v3 → v4 migration validation
 - Windows development build and runtime test
 - Android APK build, installation and touch-input test on a physical device
 - FPS/memory/readability checks on representative mobile hardware
