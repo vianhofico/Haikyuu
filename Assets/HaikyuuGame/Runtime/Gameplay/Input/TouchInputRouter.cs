@@ -1,4 +1,3 @@
-using HaikyuuGame.Gameplay.Ball;
 using UnityEngine;
 
 namespace HaikyuuGame.Gameplay.Input
@@ -29,6 +28,20 @@ namespace HaikyuuGame.Gameplay.Input
 
         private void Update()
         {
+            // Basic legacy-input gamepad bridge. Movement is already read by
+            // PlayerActor through Horizontal/Vertical axes; these buttons feed
+            // the same jump/context path used by touch input.
+            if (UnityEngine.Input.GetKeyDown(KeyCode.JoystickButton0))
+            {
+                _jumpPressed = true;
+            }
+
+            if (UnityEngine.Input.GetKeyDown(KeyCode.JoystickButton1)
+                || UnityEngine.Input.GetKeyDown(KeyCode.JoystickButton2))
+            {
+                _contextPressed = true;
+            }
+
             for (int i = 0; i < UnityEngine.Input.touchCount; i++)
             {
                 Touch touch = UnityEngine.Input.GetTouch(i);
