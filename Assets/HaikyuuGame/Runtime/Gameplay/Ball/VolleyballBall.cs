@@ -1,4 +1,6 @@
+using System;
 using HaikyuuGame.Core;
+using HaikyuuGame.Gameplay.Player;
 using UnityEngine;
 
 namespace HaikyuuGame.Gameplay.Ball
@@ -8,7 +10,10 @@ namespace HaikyuuGame.Gameplay.Ball
     {
         private Rigidbody _body;
 
+        public event Action<BallContact> Contacted;
+
         public TeamSide LastTouchTeam { get; private set; } = TeamSide.None;
+        public BallContactType LastContactType { get; private set; } = BallContactType.None;
         public Rigidbody Body => _body;
 
         private void Awake()
@@ -21,11 +26,19 @@ namespace HaikyuuGame.Gameplay.Ball
             _body.maxAngularVelocity = 35f;
         }
 
-        public void Contact(TeamSide team, Vector3 velocity, Vector3 angularVelocity)
+        public void Contact(
+            TeamSide team,
+            PlayerActor player,
+            BallContactType contactType,
+            Vector3 velocity,
+            Vector3 angularVelocity)
         {
             LastTouchTeam = team;
+            LastContactType = contactType;
+            _body.WakeUp();
             _body.linearVelocity = velocity;
             _body.angularVelocity = angularVelocity;
+            Contacted?.Invoke(new BallContact(team, player, contactType, velocity, Time.time));
         }
 
         public void ResetBall(Vector3 position)
@@ -33,6 +46,7 @@ namespace HaikyuuGame.Gameplay.Ball
             transform.position = position;
             transform.rotation = Quaternion.identity;
             LastTouchTeam = TeamSide.None;
+            LastContactType = BallContactType.None;
             _body.linearVelocity = Vector3.zero;
             _body.angularVelocity = Vector3.zero;
             _body.Sleep();
@@ -40,8 +54,12 @@ namespace HaikyuuGame.Gameplay.Ball
 
         public void WakeAndServe(TeamSide team, Vector3 velocity)
         {
-            _body.WakeUp();
-            Contact(team, velocity, new Vector3(0f, 0f, -8f * Mathf.Sign(velocity.x)));
+            Contact(
+                team,
+                null,
+                BallContactType.Serve,
+                velocity,
+                new Vector3(0f, 0f, -8f * Mathf.Sign(velocity.x)));
         }
     }
 }

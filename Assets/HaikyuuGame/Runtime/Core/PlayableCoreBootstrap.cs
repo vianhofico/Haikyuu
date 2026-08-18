@@ -32,11 +32,11 @@ namespace HaikyuuGame
             BuildCamera();
             BuildCourt();
             VolleyballBall ball = BuildBall();
-            BuildTeams(ball);
+            BuildTeams(ball, out TeamRotation leftRotation, out TeamRotation rightRotation);
 
             PlayableCoreHud hud = gameObject.AddComponent<PlayableCoreHud>();
             RallyController rally = gameObject.AddComponent<RallyController>();
-            rally.Initialize(ball, _players, _tuning, hud);
+            rally.Initialize(ball, _players, _tuning, hud, leftRotation, rightRotation);
         }
 
         private static void BuildLighting()
@@ -89,6 +89,13 @@ namespace HaikyuuGame
             CreateLine(new Vector3(0f, 0.015f, _tuning.halfCourtWidth), new Vector3(_tuning.halfCourtLength * 2f, 0.025f, 0.055f));
             CreateLine(new Vector3(-_tuning.halfCourtLength, 0.015f, 0f), new Vector3(0.055f, 0.025f, _tuning.halfCourtWidth * 2f));
             CreateLine(new Vector3(_tuning.halfCourtLength, 0.015f, 0f), new Vector3(0.055f, 0.025f, _tuning.halfCourtWidth * 2f));
+            CreateAttackLine(-3f);
+            CreateAttackLine(3f);
+        }
+
+        private void CreateAttackLine(float x)
+        {
+            CreateLine(new Vector3(x, 0.018f, 0f), new Vector3(0.045f, 0.026f, _tuning.halfCourtWidth * 2f));
         }
 
         private static void CreateLine(Vector3 position, Vector3 scale)
@@ -116,48 +123,62 @@ namespace HaikyuuGame
             return ballObject.AddComponent<VolleyballBall>();
         }
 
-        private void BuildTeams(VolleyballBall ball)
+        private void BuildTeams(
+            VolleyballBall ball,
+            out TeamRotation leftRotation,
+            out TeamRotation rightRotation)
         {
-            Vector3[] leftFormation =
+            Vector3[] leftFormation = CreateFormation(TeamSide.Left);
+            Vector3[] rightFormation = CreateFormation(TeamSide.Right);
+            VolleyballRole[] roles =
             {
-                new Vector3(-2.1f, 1f, -2.5f),
-                new Vector3(-2.1f, 1f, 0f),
-                new Vector3(-2.1f, 1f, 2.5f),
-                new Vector3(-6.0f, 1f, -2.5f),
-                new Vector3(-6.0f, 1f, 0f),
-                new Vector3(-6.0f, 1f, 2.5f)
+                VolleyballRole.Setter,
+                VolleyballRole.OutsideHitter,
+                VolleyballRole.MiddleBlocker,
+                VolleyballRole.Opposite,
+                VolleyballRole.OutsideHitter,
+                VolleyballRole.MiddleBlocker
             };
 
-            Vector3[] rightFormation =
-            {
-                new Vector3(2.1f, 1f, -2.5f),
-                new Vector3(2.1f, 1f, 0f),
-                new Vector3(2.1f, 1f, 2.5f),
-                new Vector3(6.0f, 1f, -2.5f),
-                new Vector3(6.0f, 1f, 0f),
-                new Vector3(6.0f, 1f, 2.5f)
-            };
+            List<PlayerActor> leftRoster = new List<PlayerActor>();
+            List<PlayerActor> rightRoster = new List<PlayerActor>();
 
-            for (int i = 0; i < leftFormation.Length; i++)
+            for (int i = 0; i < 6; i++)
             {
-                CreatePlayer(TeamSide.Left, i == 4, leftFormation[i], ball, i == 4);
+                leftRoster.Add(CreatePlayer(TeamSide.Left, i == 1, roles[i], leftFormation[i], ball));
+                rightRoster.Add(CreatePlayer(TeamSide.Right, false, roles[i], rightFormation[i], ball));
             }
 
-            for (int i = 0; i < rightFormation.Length; i++)
-            {
-                CreatePlayer(TeamSide.Right, false, rightFormation[i], ball, false);
-            }
+            PlayerActor leftLibero = CreatePlayer(TeamSide.Left, false, VolleyballRole.Libero, new Vector3(-12f, 1f, 0f), ball);
+            PlayerActor rightLibero = CreatePlayer(TeamSide.Right, false, VolleyballRole.Libero, new Vector3(12f, 1f, 0f), ball);
+
+            leftRotation = new TeamRotation(TeamSide.Left, leftRoster, leftLibero, leftFormation);
+            rightRotation = new TeamRotation(TeamSide.Right, rightRoster, rightLibero, rightFormation);
         }
 
-        private void CreatePlayer(
+        private static Vector3[] CreateFormation(TeamSide team)
+        {
+            float sign = team == TeamSide.Left ? -1f : 1f;
+            return new[]
+            {
+                new Vector3(sign * 2.1f, 1f, -2.5f),
+                new Vector3(sign * 2.1f, 1f, 0f),
+                new Vector3(sign * 2.1f, 1f, 2.5f),
+                new Vector3(sign * 6.0f, 1f, 2.5f),
+                new Vector3(sign * 6.0f, 1f, 0f),
+                new Vector3(sign * 6.0f, 1f, -2.5f)
+            };
+        }
+
+        private PlayerActor CreatePlayer(
             TeamSide team,
             bool human,
+            VolleyballRole role,
             Vector3 position,
-            VolleyballBall ball,
-            bool highlighted)
+            VolleyballBall ball)
         {
             GameObject playerObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            playerObject.name = human ? "Player_Human" : $"Player_{team}_{_players.Count}";
+            playerObject.name = human ? "Player_Human" : $"Player_{team}_{role}_{_players.Count}";
             playerObject.transform.localScale = new Vector3(0.65f, 1f, 0.65f);
 
             Collider collider = playerObject.GetComponent<Collider>();
@@ -170,15 +191,23 @@ namespace HaikyuuGame
                 ? new Color(0.12f, 0.12f, 0.16f)
                 : new Color(0.12f, 0.58f, 0.72f);
 
-            if (highlighted)
+            if (role == VolleyballRole.Libero)
+            {
+                teamColor = team == TeamSide.Left
+                    ? new Color(0.12f, 0.55f, 0.25f)
+                    : new Color(0.78f, 0.24f, 0.22f);
+            }
+
+            if (human)
             {
                 teamColor = new Color(1f, 0.52f, 0.05f);
             }
 
             playerObject.GetComponent<Renderer>().material.color = teamColor;
             PlayerActor actor = playerObject.AddComponent<PlayerActor>();
-            actor.Initialize(team, human, position, ball, _tuning);
+            actor.Initialize(team, human, role, position, ball, _tuning);
             _players.Add(actor);
+            return actor;
         }
     }
 }

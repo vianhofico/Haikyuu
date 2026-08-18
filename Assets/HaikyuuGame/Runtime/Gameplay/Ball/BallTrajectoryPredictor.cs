@@ -35,5 +35,14 @@ namespace HaikyuuGame.Gameplay.Ball
                 targetY,
                 position.z + (velocity.z * time));
         }
+
+        public static Vector3 SolveBallisticVelocity(Vector3 origin, Vector3 target, float flightTime)
+        {
+            float safeTime = Mathf.Max(0.15f, flightTime);
+            Vector3 displacement = target - origin;
+            Vector3 horizontal = new Vector3(displacement.x, 0f, displacement.z) / safeTime;
+            float vertical = (displacement.y - (0.5f * Physics.gravity.y * safeTime * safeTime)) / safeTime;
+            return new Vector3(horizontal.x, vertical, horizontal.z);
+        }
     }
 }

@@ -11,30 +11,54 @@ namespace HaikyuuGame.Gameplay.Match
     public sealed class RallyController : MonoBehaviour
     {
         private readonly MatchScore _score = new MatchScore();
+        private readonly TeamPossession _possession = new TeamPossession();
         private readonly List<PlayerActor> _players = new List<PlayerActor>();
 
         private VolleyballBall _ball;
         private VolleyballTuning _tuning;
         private PlayableCoreHud _hud;
+        private TeamRotation _leftRotation;
+        private TeamRotation _rightRotation;
         private TeamSide _servingTeam = TeamSide.Left;
         private bool _rallyActive;
         private bool _resolvingPoint;
 
         public MatchScore Score => _score;
+        public TeamPossession Possession => _possession;
         public TeamSide ServingTeam => _servingTeam;
+        public bool RallyActive => _rallyActive;
 
         public void Initialize(
             VolleyballBall ball,
             IEnumerable<PlayerActor> players,
             VolleyballTuning tuning,
-            PlayableCoreHud hud)
+            PlayableCoreHud hud,
+            TeamRotation leftRotation,
+            TeamRotation rightRotation)
         {
             _ball = ball;
             _tuning = tuning;
             _hud = hud;
+            _leftRotation = leftRotation;
+            _rightRotation = rightRotation;
             _players.AddRange(players);
+
+            for (int i = 0; i < _players.Count; i++)
+            {
+                _players[i].BindMatch(this);
+            }
+
+            _ball.Contacted += OnBallContact;
             _hud.Bind(this);
             StartNewRally();
+        }
+
+        private void OnDestroy()
+        {
+            if (_ball != null)
+            {
+                _ball.Contacted -= OnBallContact;
+            }
         }
 
         private void Update()
@@ -71,22 +95,60 @@ namespace HaikyuuGame.Gameplay.Match
             }
         }
 
+        private void OnBallContact(BallContact contact)
+        {
+            if (!_rallyActive && contact.Type != BallContactType.Serve)
+            {
+                return;
+            }
+
+            PossessionUpdate update = _possession.Register(contact);
+            string actor = contact.Player != null ? contact.Player.BaseRole.ToString() : "Server";
+            _hud.SetMessage($"{contact.Team} {actor}: {contact.Type} | touches {_possession.CountedTouches}/3");
+
+            if (update.Fault)
+            {
+                ResolvePoint(Opposite(update.FaultingTeam), "Four contacts");
+            }
+        }
+
         private void ResolvePoint(TeamSide scorer, string reason)
         {
-            if (_resolvingPoint)
+            if (_resolvingPoint || scorer == TeamSide.None)
             {
                 return;
             }
 
             _resolvingPoint = true;
             _rallyActive = false;
-            _score.AddPoint(scorer);
-            _servingTeam = scorer;
 
-            if (_score.HasWinner(_tuning.quickSetTargetScore, out TeamSide winner))
+            bool sideOut = scorer != _servingTeam;
+            if (sideOut)
             {
-                _hud.SetMessage($"{winner} wins the prototype set! Press R or wait for restart.");
+                TeamRotation rotation = scorer == TeamSide.Left ? _leftRotation : _rightRotation;
+                rotation?.RotateClockwise();
+            }
+
+            _servingTeam = scorer;
+            ScoreUpdate update = _score.AddPoint(
+                scorer,
+                _tuning.quickMatch,
+                _tuning.quickSetTargetScore,
+                _tuning.standardSetTargetScore,
+                _tuning.decidingSetTargetScore,
+                _tuning.setsToWin);
+
+            if (update.MatchWon)
+            {
+                _hud.SetMessage($"{update.Winner} wins the match! Restarting...");
                 StartCoroutine(RestartMatchAfterDelay());
+                return;
+            }
+
+            if (update.SetWon)
+            {
+                _hud.SetMessage($"Set won by {scorer}. Next set starts shortly.");
+                StartCoroutine(ResetAfterSet());
                 return;
             }
 
@@ -100,10 +162,19 @@ namespace HaikyuuGame.Gameplay.Match
             StartNewRally();
         }
 
+        private IEnumerator ResetAfterSet()
+        {
+            yield return new WaitForSeconds(_tuning.rallyResetDelay * 1.6f);
+            StartNewRally();
+        }
+
         private IEnumerator RestartMatchAfterDelay()
         {
             yield return new WaitForSeconds(_tuning.rallyResetDelay * 2f);
-            _score.Reset();
+            _score.ResetMatch();
+            _leftRotation?.ResetRotation();
+            _rightRotation?.ResetRotation();
+            _servingTeam = TeamSide.Left;
             StartNewRally();
         }
 
@@ -112,11 +183,10 @@ namespace HaikyuuGame.Gameplay.Match
             StopAllCoroutines();
             _resolvingPoint = false;
             _rallyActive = false;
+            _possession.Reset();
 
-            for (int i = 0; i < _players.Count; i++)
-            {
-                _players[i].ResetToHome();
-            }
+            _leftRotation?.ResetPlayersToHome();
+            _rightRotation?.ResetPlayersToHome();
 
             float serveX = _servingTeam == TeamSide.Left ? -7.2f : 7.2f;
             Vector3 servePosition = new Vector3(serveX, 2.05f, 0f);
@@ -129,13 +199,13 @@ namespace HaikyuuGame.Gameplay.Match
         {
             yield return new WaitForSeconds(_tuning.autoServeDelay);
             float direction = _servingTeam == TeamSide.Left ? 1f : -1f;
-            Vector3 serveVelocity = new Vector3(direction * 8.4f, 5.6f, Random.Range(-0.65f, 0.65f));
-            _ball.WakeAndServe(_servingTeam, serveVelocity);
+            Vector3 serveVelocity = new Vector3(direction * 8.8f, 5.8f, Random.Range(-0.75f, 0.75f));
             _rallyActive = true;
+            _ball.WakeAndServe(_servingTeam, serveVelocity);
             _hud.SetMessage("Rally!");
         }
 
-        private static TeamSide Opposite(TeamSide team)
+        public static TeamSide Opposite(TeamSide team)
         {
             if (team == TeamSide.Left)
             {
