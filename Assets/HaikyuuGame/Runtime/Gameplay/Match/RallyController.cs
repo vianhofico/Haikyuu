@@ -136,6 +136,14 @@ namespace HaikyuuGame.Gameplay.Match
             StartNewRally();
         }
 
+        public void SetPlayersPerSide(int count)
+        {
+            int normalized = count <= 3 ? 3 : 6;
+            _leftRotation?.SetActivePlayerCount(normalized);
+            _rightRotation?.SetActivePlayerCount(normalized);
+            RestartMatchNow();
+        }
+
         public bool RequestHumanServe(PlayerActor server)
         {
             if (!AwaitingHumanServe || server == null || server != CurrentServer)
@@ -173,6 +181,13 @@ namespace HaikyuuGame.Gameplay.Match
                 return;
             }
 
+            if (IsIllegalAttack(contact, out string attackFault))
+            {
+                ContactProcessed?.Invoke(contact);
+                ResolvePoint(Opposite(contact.Team), attackFault);
+                return;
+            }
+
             PossessionUpdate update = _possession.Register(contact);
             ContactProcessed?.Invoke(contact);
             string actor = contact.Player != null ? contact.Player.DisplayName : "Server";
@@ -193,8 +208,38 @@ namespace HaikyuuGame.Gameplay.Match
 
             if (update.Fault)
             {
-                ResolvePoint(Opposite(update.FaultingTeam), "Four contacts");
+                ResolvePoint(Opposite(update.FaultingTeam), update.Reason);
             }
+        }
+
+        private bool IsIllegalAttack(BallContact contact, out string reason)
+        {
+            reason = string.Empty;
+            if (contact.Type != BallContactType.Attack || contact.Player == null || _ball == null)
+            {
+                return false;
+            }
+
+            // Only enforce the attack-height restrictions when the contact is
+            // above the top of the net. Low free-ball style contacts remain legal.
+            if (_ball.transform.position.y < _tuning.netHeight - 0.03f)
+            {
+                return false;
+            }
+
+            if (contact.Player.BaseRole == VolleyballRole.Libero)
+            {
+                reason = "Libero illegal attack";
+                return true;
+            }
+
+            if (!contact.Player.IsFrontRow && Mathf.Abs(contact.Player.transform.position.x) < 3f)
+            {
+                reason = "Back-row attack fault";
+                return true;
+            }
+
+            return false;
         }
 
         private void ResolvePoint(TeamSide scorer, string reason)
