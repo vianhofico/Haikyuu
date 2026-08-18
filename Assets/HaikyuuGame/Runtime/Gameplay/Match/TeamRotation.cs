@@ -24,13 +24,17 @@ namespace HaikyuuGame.Gameplay.Match
                 _roster[i] = sixPlayerRoster[i];
                 _slotPositions[i] = slotPositions[i];
             }
+
             _libero = libero;
             RefreshCourtAssignments();
         }
 
         public TeamSide Team => _team;
         public int RotationOffset => _rotationOffset;
-        public PlayerActor CurrentServer => GetActiveAtSlot(3);
+
+        // Slot 3 is the prototype service position. The server always comes from
+        // the six-player rotation, never from the libero replacement layer.
+        public PlayerActor CurrentServer => GetOccupant(3);
 
         public PlayerActor GetActiveAtSlot(int slot)
         {
@@ -58,16 +62,26 @@ namespace HaikyuuGame.Gameplay.Match
         {
             for (int i = 0; i < _roster.Length; i++)
             {
-                if (_roster[i].gameObject.activeSelf) _roster[i].ResetToHome();
+                if (_roster[i].gameObject.activeSelf)
+                {
+                    _roster[i].ResetToHome();
+                }
             }
-            if (_libero != null && _libero.gameObject.activeSelf) _libero.ResetToHome();
+
+            if (_libero != null && _libero.gameObject.activeSelf)
+            {
+                _libero.ResetToHome();
+            }
         }
 
         private void RefreshCourtAssignments()
         {
             int liberoSlot = -1;
             PlayerActor replacedMiddle = null;
-            for (int slot = 3; slot < 6; slot++)
+
+            // Slot 3 is serving in this prototype. FIVB-style play does not let
+            // the libero serve, so only replace a back-row middle in slots 4/5.
+            for (int slot = 4; slot < 6; slot++)
             {
                 PlayerActor occupant = GetOccupant(slot);
                 if (occupant.BaseRole == VolleyballRole.MiddleBlocker)
