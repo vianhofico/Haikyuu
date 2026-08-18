@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using HaikyuuGame.Core;
 using HaikyuuGame.Gameplay.Ball;
 using HaikyuuGame.Gameplay.Match;
 using UnityEngine;
@@ -81,7 +82,7 @@ namespace HaikyuuGame.Gameplay.Presentation
             }
         }
 
-        private void OnPointScored(Core.TeamSide scorer)
+        private void OnPointScored(TeamSide scorer)
         {
             _last.Clear();
             _last.AddRange(_current);
