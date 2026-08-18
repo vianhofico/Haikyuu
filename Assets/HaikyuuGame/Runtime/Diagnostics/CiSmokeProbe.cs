@@ -86,7 +86,7 @@ namespace HaikyuuGame.Diagnostics
 
             Debug.Log(
                 $"CI_SMOKE_PASS rallyActive={rally.RallyActive} servingTeam={rally.ServingTeam} "
-                + $"score={rally.Score.LeftPoints}-{rally.Score.RightPoints}");
+                + $"score={rally.Score.Left}-{rally.Score.Right}");
             Application.Quit(0);
         }
 
