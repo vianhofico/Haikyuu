@@ -6,7 +6,7 @@ namespace HaikyuuGame.Persistence
 {
     public sealed class SaveGameService
     {
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
         private const string FileName = "haikyuu_save.json";
         private const string BackupFileName = "haikyuu_save.backup.json";
 
@@ -122,14 +122,13 @@ namespace HaikyuuGame.Persistence
                 data.settings = new GameSettingsSaveData();
             }
 
-            // v1 did not contain the accessibility toggles. New bool fields are
-            // safely deserialized as false; enable the intended default for shake
-            // only when migrating an older save.
             if (data.version < 2)
             {
                 data.settings.screenShake = true;
             }
 
+            // v3 adds campaign/tournament/challenge completion counters. Their
+            // default zero/false values are already backward-compatible.
             data.version = CurrentVersion;
         }
     }
