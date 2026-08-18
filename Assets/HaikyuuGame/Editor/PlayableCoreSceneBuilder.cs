@@ -22,7 +22,6 @@ namespace HaikyuuGame.Editor
             }
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            scene.name = "PlayableCore";
             EditorSceneManager.SaveScene(scene, ScenePath);
 
             EditorBuildSettings.scenes = new[]
