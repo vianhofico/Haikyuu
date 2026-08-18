@@ -6,7 +6,7 @@ namespace HaikyuuGame.Persistence
 {
     public sealed class SaveGameService
     {
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
         private const string FileName = "haikyuu_save.json";
         private const string BackupFileName = "haikyuu_save.backup.json";
 
@@ -127,8 +127,16 @@ namespace HaikyuuGame.Persistence
                 data.settings.screenShake = true;
             }
 
-            // v3 adds campaign/tournament/challenge completion counters. Their
-            // default zero/false values are already backward-compatible.
+            if (data.version < 4)
+            {
+                // v4 exposes AI difficulty and runtime presentation settings.
+                // Normal is index 1; old saves did not contain this field and
+                // would otherwise deserialize it as Rookie (0).
+                data.settings.aiDifficulty = 1;
+            }
+
+            data.settings.masterVolume = Mathf.Clamp01(data.settings.masterVolume);
+            data.settings.sfxVolume = Mathf.Clamp01(data.settings.sfxVolume);
             data.version = CurrentVersion;
         }
     }
