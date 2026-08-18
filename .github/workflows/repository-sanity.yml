@@ -1,0 +1,23 @@
+name: Repository sanity
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python available
+        run: python3 --version
+      - name: Validate repository structure and roster
+        run: python3 Tools/validate_repo.py
