@@ -100,7 +100,11 @@ namespace HaikyuuGame.Training
                 _completed = true;
                 _message = "Challenge complete! +100 coins";
                 GameShellController shell = FindFirstObjectByType<GameShellController>();
-                shell?.AwardCoins(100, "Challenge complete!");
+                if (shell != null && shell.Save != null)
+                {
+                    shell.Save.challengesCompleted++;
+                    shell.AwardCoins(100, "Challenge complete!");
+                }
             }
             else
             {
