@@ -50,9 +50,9 @@ namespace HaikyuuGame.Gameplay.Presentation
                 default: clip = _receive; volume = 0.55f; break;
             }
 
-            if (clip != null)
+            if (clip != null && _source != null)
             {
-                _source.PlayOneShot(clip, volume);
+                _source.PlayOneShot(clip, volume * RuntimePresentationSettings.SfxVolume);
             }
         }
 
