@@ -9,6 +9,7 @@ using HaikyuuGame.Gameplay.Player;
 using HaikyuuGame.Gameplay.Presentation;
 using HaikyuuGame.Gameplay.UI;
 using HaikyuuGame.Meta;
+using HaikyuuGame.Training;
 using UnityEngine;
 
 namespace HaikyuuGame
@@ -55,8 +56,11 @@ namespace HaikyuuGame
             RallyController rally = gameObject.AddComponent<RallyController>();
             rally.Initialize(ball, _players, _tuning, hud, leftRotation, rightRotation);
 
+            TrainingTracker training = gameObject.AddComponent<TrainingTracker>();
+            training.Initialize(rally);
+
             GameShellController shell = gameObject.AddComponent<GameShellController>();
-            shell.Initialize(rally);
+            shell.Initialize(rally, _tuning);
         }
 
         private static void BuildLighting()

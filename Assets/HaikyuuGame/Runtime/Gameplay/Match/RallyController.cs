@@ -26,6 +26,8 @@ namespace HaikyuuGame.Gameplay.Match
         private bool _resolvingPoint;
 
         public event Action<TeamSide> MatchCompleted;
+        public event Action<TeamSide> PointScored;
+        public event Action<BallContact> ContactProcessed;
 
         public MatchScore Score => _score;
         public TeamPossession Possession => _possession;
@@ -105,6 +107,13 @@ namespace HaikyuuGame.Gameplay.Match
             }
         }
 
+        public void RestartMatchNow()
+        {
+            StopAllCoroutines();
+            ResetMatchState();
+            StartNewRally();
+        }
+
         private void OnBallContact(BallContact contact)
         {
             if (!_rallyActive && contact.Type != BallContactType.Serve)
@@ -113,6 +122,7 @@ namespace HaikyuuGame.Gameplay.Match
             }
 
             PossessionUpdate update = _possession.Register(contact);
+            ContactProcessed?.Invoke(contact);
             string actor = contact.Player != null ? contact.Player.DisplayName : "Server";
             _hud.SetMessage($"{contact.Team} {actor}: {contact.Type} | touches {_possession.CountedTouches}/3");
 
@@ -145,6 +155,7 @@ namespace HaikyuuGame.Gameplay.Match
             _resolvingPoint = true;
             _rallyActive = false;
             _momentum.PointTo(scorer);
+            PointScored?.Invoke(scorer);
 
             bool sideOut = scorer != _servingTeam;
             if (sideOut)
@@ -197,12 +208,17 @@ namespace HaikyuuGame.Gameplay.Match
         private IEnumerator RestartMatchAfterDelay()
         {
             yield return new WaitForSeconds(_tuning.rallyResetDelay * 2f);
+            ResetMatchState();
+            StartNewRally();
+        }
+
+        private void ResetMatchState()
+        {
             _score.ResetMatch();
             _momentum.ResetMatch();
             _leftRotation?.ResetRotation();
             _rightRotation?.ResetRotation();
             _servingTeam = TeamSide.Left;
-            StartNewRally();
         }
 
         private void StartNewRally()
