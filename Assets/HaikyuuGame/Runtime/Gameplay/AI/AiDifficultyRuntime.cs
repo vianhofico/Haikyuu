@@ -1,3 +1,5 @@
+using HaikyuuGame.Gameplay;
+
 namespace HaikyuuGame.Gameplay.AI
 {
     public enum AiDifficulty
