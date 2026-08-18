@@ -25,6 +25,9 @@ required = [
     "Assets/HaikyuuGame/Runtime/Gameplay/Presentation/RallyReplayTrace.cs",
     "Assets/HaikyuuGame/Runtime/Gameplay/UI/MatchStatisticsOverlay.cs",
     "Assets/HaikyuuGame/Runtime/Gameplay/Ball/ContactTimingGrade.cs",
+    "Assets/HaikyuuGame/Editor/CiBuild.cs",
+    "Assets/HaikyuuGame/Runtime/Diagnostics/CiSmokeProbe.cs",
+    ".github/workflows/unity-ci.yml",
     "ProjectSettings/ProjectVersion.txt",
     "Packages/manifest.json",
 ]
@@ -104,6 +107,27 @@ if gamepad_file.exists():
     gamepad = gamepad_file.read_text(encoding="utf-8")
     if "JoystickButton0" not in gamepad or "JoystickButton1" not in gamepad:
         errors.append("basic gamepad jump/context bridge is missing")
+
+ci_build_file = ROOT / "Assets/HaikyuuGame/Editor/CiBuild.cs"
+if ci_build_file.exists():
+    ci_build = ci_build_file.read_text(encoding="utf-8")
+    for hook in ("ProjectValidator.ValidateProjectData", "PlayableCoreSceneBuilder.Generate", "StandaloneLinux64", "CI_BUILD_PASS"):
+        if hook not in ci_build:
+            errors.append(f"CI build entrypoint missing: {hook}")
+
+smoke_probe_file = ROOT / "Assets/HaikyuuGame/Runtime/Diagnostics/CiSmokeProbe.cs"
+if smoke_probe_file.exists():
+    smoke_probe = smoke_probe_file.read_text(encoding="utf-8")
+    for hook in ("-ciSmoke", "CI_SMOKE_START", "CI_SMOKE_PASS", "CI_SMOKE_FAIL", "Application.Quit"):
+        if hook not in smoke_probe:
+            errors.append(f"CI smoke probe missing: {hook}")
+
+ci_workflow_file = ROOT / ".github/workflows/unity-ci.yml"
+if ci_workflow_file.exists():
+    ci_workflow = ci_workflow_file.read_text(encoding="utf-8")
+    for hook in ("game-ci/unity-builder@v5.0.0", "6000.3.0f1", "HaikyuuGame.Editor.CiBuild.BuildLinuxSmoke", "CI_SMOKE_PASS"):
+        if hook not in ci_workflow:
+            errors.append(f"Unity CI workflow missing: {hook}")
 
 for path in (ROOT / "Assets/HaikyuuGame").rglob("*.cs"):
     text = path.read_text(encoding="utf-8")

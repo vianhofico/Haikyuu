@@ -1,0 +1,117 @@
+name: Unity build and smoke
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+  UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+  UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+  UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+
+jobs:
+  repository-sanity:
+    name: Repository sanity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate source/data invariants
+        run: python3 Tools/validate_repo.py
+
+  unity-linux-smoke:
+    name: Unity 6.3 Linux headless smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect Unity license configuration
+        id: license
+        shell: bash
+        run: |
+          personal=false
+          professional=false
+          if [[ -n "$UNITY_LICENSE" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
+            personal=true
+          fi
+          if [[ -n "$UNITY_SERIAL" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
+            professional=true
+          fi
+          if [[ "$personal" == "true" || "$professional" == "true" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Unity CI license configuration detected."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Unity smoke build skipped. Configure UNITY_LICENSE + UNITY_EMAIL + UNITY_PASSWORD for Personal, or UNITY_SERIAL + UNITY_EMAIL + UNITY_PASSWORD for Pro."
+          fi
+
+      - name: Build Linux smoke player with Unity 6.3
+        if: steps.license.outputs.available == 'true'
+        uses: game-ci/unity-builder@v5.0.0
+        with:
+          unityVersion: 6000.3.0f1
+          targetPlatform: StandaloneLinux64
+          buildName: HaikyuuSmoke
+          buildsPath: build
+          buildMethod: HaikyuuGame.Editor.CiBuild.BuildLinuxSmoke
+          allowDirtyBuild: true
+
+      - name: Run game headlessly
+        if: steps.license.outputs.available == 'true'
+        shell: bash
+        run: |
+          executable="build/StandaloneLinux64/HaikyuuSmoke.x86_64"
+          if [[ ! -f "$executable" ]]; then
+            echo "Expected smoke executable not found: $executable"
+            find build -maxdepth 4 -type f -print || true
+            exit 1
+          fi
+
+          chmod +x "$executable"
+          set +e
+          timeout 30s "$executable" -batchmode -nographics -logFile smoke-player.log -ciSmoke
+          smoke_exit=$?
+          set -e
+
+          cat smoke-player.log || true
+          if [[ $smoke_exit -eq 124 ]]; then
+            echo "Smoke player did not exit within 30 seconds."
+            exit 1
+          fi
+          if [[ $smoke_exit -ne 0 ]]; then
+            echo "Smoke player exited with code $smoke_exit."
+            exit "$smoke_exit"
+          fi
+          grep -q "CI_SMOKE_PASS" smoke-player.log
+          if grep -q "CI_SMOKE_FAIL" smoke-player.log; then
+            exit 1
+          fi
+
+      - name: Upload smoke log
+        if: always() && steps.license.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-smoke-log
+          path: smoke-player.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload Linux smoke build
+        if: success() && steps.license.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Haikyuu-Linux-Smoke
+          path: build/StandaloneLinux64
+          if-no-files-found: error
+          retention-days: 7
