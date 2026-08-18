@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
@@ -5,9 +6,20 @@ namespace HaikyuuGame.Persistence
 {
     public sealed class SaveGameService
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
         private const string FileName = "haikyuu_save.json";
         private const string BackupFileName = "haikyuu_save.backup.json";
+
+        private static readonly string[] DefaultDreamTeam =
+        {
+            "kageyama_tobio",
+            "bokuto_kotaro",
+            "hinata_shoyo",
+            "ushijima_wakatoshi",
+            "hoshiumi_korai",
+            "tsukishima_kei",
+            "nishinoya_yu"
+        };
 
         public SaveGameData Current { get; private set; }
 
@@ -28,6 +40,7 @@ namespace HaikyuuGame.Persistence
                 Current = SaveGameData.CreateDefault();
             }
 
+            Migrate(Current);
             Current.version = CurrentVersion;
             string json = JsonUtility.ToJson(Current, true);
 
@@ -49,6 +62,7 @@ namespace HaikyuuGame.Persistence
         public void Reset()
         {
             Current = SaveGameData.CreateDefault();
+            Migrate(Current);
             Save();
         }
 
@@ -80,7 +94,22 @@ namespace HaikyuuGame.Persistence
 
             if (data.unlockedCharacterIds == null)
             {
-                data.unlockedCharacterIds = new System.Collections.Generic.List<string>();
+                data.unlockedCharacterIds = new List<string>();
+            }
+
+            if (data.dreamTeamCharacterIds == null)
+            {
+                data.dreamTeamCharacterIds = new List<string>();
+            }
+
+            while (data.dreamTeamCharacterIds.Count < DefaultDreamTeam.Length)
+            {
+                data.dreamTeamCharacterIds.Add(DefaultDreamTeam[data.dreamTeamCharacterIds.Count]);
+            }
+
+            if (data.dreamTeamCharacterIds.Count > DefaultDreamTeam.Length)
+            {
+                data.dreamTeamCharacterIds.RemoveRange(DefaultDreamTeam.Length, data.dreamTeamCharacterIds.Count - DefaultDreamTeam.Length);
             }
 
             if (data.career == null)
@@ -91,6 +120,14 @@ namespace HaikyuuGame.Persistence
             if (data.settings == null)
             {
                 data.settings = new GameSettingsSaveData();
+            }
+
+            // v1 did not contain the accessibility toggles. New bool fields are
+            // safely deserialized as false; enable the intended default for shake
+            // only when migrating an older save.
+            if (data.version < 2)
+            {
+                data.settings.screenShake = true;
             }
 
             data.version = CurrentVersion;
