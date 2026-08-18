@@ -14,6 +14,7 @@ namespace HaikyuuGame.Gameplay.Ball
 
         public TeamSide LastTouchTeam { get; private set; } = TeamSide.None;
         public BallContactType LastContactType { get; private set; } = BallContactType.None;
+        public BallContact LastContact { get; private set; }
         public Rigidbody Body => _body;
 
         private void Awake()
@@ -38,7 +39,9 @@ namespace HaikyuuGame.Gameplay.Ball
             _body.WakeUp();
             _body.linearVelocity = velocity;
             _body.angularVelocity = angularVelocity;
-            Contacted?.Invoke(new BallContact(team, player, contactType, velocity, Time.time));
+            BallContact contact = new BallContact(team, player, contactType, velocity, Time.time);
+            LastContact = contact;
+            Contacted?.Invoke(contact);
         }
 
         public void ResetBall(Vector3 position)
@@ -47,6 +50,7 @@ namespace HaikyuuGame.Gameplay.Ball
             transform.rotation = Quaternion.identity;
             LastTouchTeam = TeamSide.None;
             LastContactType = BallContactType.None;
+            LastContact = default;
             _body.linearVelocity = Vector3.zero;
             _body.angularVelocity = Vector3.zero;
             _body.Sleep();

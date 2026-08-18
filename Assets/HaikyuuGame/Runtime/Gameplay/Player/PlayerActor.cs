@@ -69,6 +69,24 @@ namespace HaikyuuGame.Gameplay.Player
             _rally = rally;
         }
 
+        public bool HasSkill(string skillId)
+        {
+            if (Profile == null || Profile.SkillIds == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < Profile.SkillIds.Length; i++)
+            {
+                if (Profile.SkillIds[i] == skillId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public void SetCourtAssignment(int slot, Vector3 homePosition, bool active)
         {
             CourtSlot = slot;
@@ -374,7 +392,11 @@ namespace HaikyuuGame.Gameplay.Player
                 ? attacker.transform.position + Vector3.up * _tuning.setTargetHeight + new Vector3(attackDirection * 0.35f, 0f, 0f)
                 : new Vector3(Team == TeamSide.Left ? -1.6f : 1.6f, _tuning.setTargetHeight, 0f);
 
-            bool quick = attacker != null && (attacker.BaseRole == VolleyballRole.MiddleBlocker || attacker.ArchetypeIs(CharacterArchetype.SpeedDecoy));
+            float synergy = attacker != null ? CharacterSynergyCatalog.SetTargetPriority(Profile, attacker.Profile) : 0f;
+            bool quick = attacker != null
+                && (attacker.BaseRole == VolleyballRole.MiddleBlocker
+                    || attacker.ArchetypeIs(CharacterArchetype.SpeedDecoy)
+                    || synergy >= 2.5f);
             float control = StatScale(Stats.set) * ArchetypeModifiers.SetControl(Archetype);
             float flightTime = (quick ? _tuning.quickSetFlightTime : _tuning.setFlightTime) / Mathf.Clamp(control, 0.86f, 1.16f);
             Vector3 velocity = BallTrajectoryPredictor.SolveBallisticVelocity(_ball.transform.position, target, flightTime);
@@ -383,6 +405,8 @@ namespace HaikyuuGame.Gameplay.Player
 
         private void PerformAttack()
         {
+            PlayerActor previousSetter = _ball.LastContact.Player;
+            RuntimeCharacterProfile setterProfile = previousSetter != null ? previousSetter.Profile : null;
             float attackDirection = Team == TeamSide.Left ? 1f : -1f;
             float technique = Stats.technique / 100f;
             float aimRange = Mathf.Lerp(2.2f, 3.6f, technique);
@@ -394,18 +418,30 @@ namespace HaikyuuGame.Gameplay.Player
                 ? -_tuning.spikeDownSpeed
                 : -1.2f;
 
-            float attackMultiplier = StatScale(Stats.attack) * ArchetypeModifiers.Attack(Archetype);
+            float attackMultiplier = StatScale(Stats.attack)
+                * ArchetypeModifiers.Attack(Archetype)
+                * CharacterSynergyCatalog.AttackMultiplier(setterProfile, Profile);
+
+            if (Archetype == CharacterArchetype.MomentumAce)
+            {
+                float normalizedFlow = (_rally.Momentum.Get(Team) + 100f) / 200f;
+                attackMultiplier *= Mathf.Lerp(0.93f, 1.14f, normalizedFlow);
+            }
+
+            if (HasSkill("bad_set_killer") && _ball.LastContact.Type != BallContactType.Set)
+            {
+                attackMultiplier *= 1.10f;
+            }
+
             Vector3 velocity = new Vector3(
                 attackDirection * _tuning.spikeForwardSpeed * attackMultiplier,
                 downSpeed * Mathf.Lerp(0.9f, 1.08f, technique),
                 aimZ);
 
-            _ball.Contact(
-                Team,
-                this,
-                BallContactType.Attack,
-                velocity,
-                new Vector3(0f, 0f, -attackDirection * 20f));
+            float spinDirection = HasSkill("southpaw") ? attackDirection : -attackDirection;
+            Vector3 spin = new Vector3(0f, HasSkill("flexible_wrist") ? 15f : 0f, spinDirection * 20f);
+
+            _ball.Contact(Team, this, BallContactType.Attack, velocity, spin);
         }
 
         private void PerformBlock()
@@ -413,6 +449,13 @@ namespace HaikyuuGame.Gameplay.Player
             float attackDirection = Team == TeamSide.Left ? 1f : -1f;
             Vector3 incoming = _ball.Body.linearVelocity;
             float blockMultiplier = StatScale(Stats.block) * ArchetypeModifiers.Block(Archetype);
+
+            if (Archetype == CharacterArchetype.GuessBlocker)
+            {
+                float readChance = Mathf.Lerp(0.58f, 0.86f, Stats.technique / 100f);
+                blockMultiplier *= Random.value <= readChance ? 1.22f : 0.78f;
+            }
+
             Vector3 velocity = new Vector3(
                 attackDirection * Mathf.Max(_tuning.blockForwardSpeed, Mathf.Abs(incoming.x) * 0.72f) * blockMultiplier,
                 _tuning.blockUpSpeed,
@@ -450,6 +493,7 @@ namespace HaikyuuGame.Gameplay.Player
                     score += 0.5f;
                 }
 
+                score += CharacterSynergyCatalog.SetTargetPriority(Profile, candidate.Profile);
                 score -= Mathf.Abs(candidate.transform.position.z - transform.position.z) * 0.04f;
 
                 if (score > bestScore)

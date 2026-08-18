@@ -13,6 +13,7 @@ namespace HaikyuuGame.Gameplay.Match
     {
         private readonly MatchScore _score = new MatchScore();
         private readonly TeamPossession _possession = new TeamPossession();
+        private readonly TeamMomentum _momentum = new TeamMomentum();
         private readonly List<PlayerActor> _players = new List<PlayerActor>();
 
         private VolleyballBall _ball;
@@ -28,6 +29,7 @@ namespace HaikyuuGame.Gameplay.Match
 
         public MatchScore Score => _score;
         public TeamPossession Possession => _possession;
+        public TeamMomentum Momentum => _momentum;
         public TeamSide ServingTeam => _servingTeam;
         public bool RallyActive => _rallyActive;
         public PlayerActor HumanPlayer { get; private set; }
@@ -114,6 +116,19 @@ namespace HaikyuuGame.Gameplay.Match
             string actor = contact.Player != null ? contact.Player.DisplayName : "Server";
             _hud.SetMessage($"{contact.Team} {actor}: {contact.Type} | touches {_possession.CountedTouches}/3");
 
+            if (contact.Type == BallContactType.Attack)
+            {
+                _momentum.Add(contact.Team, 1.5f);
+            }
+            else if (contact.Type == BallContactType.Block)
+            {
+                _momentum.Add(contact.Team, 4f);
+            }
+            else if (contact.Type == BallContactType.Dig)
+            {
+                _momentum.Add(contact.Team, 1f);
+            }
+
             if (update.Fault)
             {
                 ResolvePoint(Opposite(update.FaultingTeam), "Four contacts");
@@ -129,6 +144,7 @@ namespace HaikyuuGame.Gameplay.Match
 
             _resolvingPoint = true;
             _rallyActive = false;
+            _momentum.PointTo(scorer);
 
             bool sideOut = scorer != _servingTeam;
             if (sideOut)
@@ -156,6 +172,7 @@ namespace HaikyuuGame.Gameplay.Match
 
             if (update.SetWon)
             {
+                _momentum.ResetSet();
                 _hud.SetMessage($"Set won by {scorer}. Next set starts shortly.");
                 StartCoroutine(ResetAfterSet());
                 return;
@@ -181,6 +198,7 @@ namespace HaikyuuGame.Gameplay.Match
         {
             yield return new WaitForSeconds(_tuning.rallyResetDelay * 2f);
             _score.ResetMatch();
+            _momentum.ResetMatch();
             _leftRotation?.ResetRotation();
             _rightRotation?.ResetRotation();
             _servingTeam = TeamSide.Left;
