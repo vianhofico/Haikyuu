@@ -72,15 +72,20 @@ Gate remaining: open/import cleanly and run project validator in Unity.
 - [x] role-aware positioning
 - [x] stats/technique affect reaction/decision timing
 - [x] character/team synergy priorities
-- [ ] final named difficulty presets exposed in UI
+- [x] six named runtime difficulty profiles exposed through F10 settings
+- [x] difficulty changes local AI decision timing immediately
 - [ ] funnel-defense specialization pass
 - [ ] balance with real playtest telemetry
 
 ## Phase 5 — Game Feel / Presentation — FUNCTIONAL ALPHA COMPLETE
 
 - [x] keyboard controls
+- [x] basic legacy-axis gamepad movement + Jump/Action bridge
 - [x] mobile touch move/JUMP/ACTION
 - [x] hit-stop with pause ownership protection
+- [x] reduced-cinematics toggle disables hit-stop
+- [x] screen-shake toggle applies at runtime
+- [x] master/SFX volume runtime settings
 - [x] camera follow and impact punch
 - [x] ball trail
 - [x] PERFECT feedback
@@ -129,9 +134,10 @@ Gate remaining: open/import cleanly and run project validator in Unity.
 
 - [x] local JSON save
 - [x] backup/fallback load
-- [x] migration to save v3
+- [x] migration through save v4
 - [x] Story/Tournament/Challenge completion counters
 - [x] persistent Career and Dream Team state
+- [x] persistent AI/accessibility/audio settings
 - [x] VI/EN localization foundation
 - [x] Windows development build command
 - [x] Android development APK build command
@@ -162,9 +168,11 @@ PR #1 stays draft until all of these pass:
 3. Quick/Story/Career/Tournament/Training/Challenge/DreamTeam/Arcade3v3: **playable without exceptions/soft locks**.
 4. Repeated 3v3 ↔ 6v6 switching: **all correct active players and rotations**.
 5. Libero never serves; pause stays paused through hit-stop.
-6. Save v1/v2 → v3 migration: **progress retained**.
-7. Windows development build launches and completes a match.
-8. Android APK installs on a physical device; touch control usable.
-9. Representative Android device: record FPS/memory and resolve blocking performance issues.
+6. Save v1/v2/v3 → v4 migration: **progress retained**.
+7. F10 AI/presentation/audio settings persist and apply immediately.
+8. Keyboard, gamepad and mobile touch controls pass regression.
+9. Windows development build launches and completes a match.
+10. Android APK installs on a physical device; touch control usable.
+11. Representative Android device: record FPS/memory and resolve blocking performance issues.
 
 Once the code/runtime gates pass, the repository is a validated offline fan-game alpha. Store/commercial release still depends on the Phase 9 asset/IP/release gates.
