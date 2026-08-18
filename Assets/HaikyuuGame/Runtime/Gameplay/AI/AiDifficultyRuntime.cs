@@ -12,6 +12,9 @@ namespace HaikyuuGame.Gameplay.AI
 
     public static class AiDifficultyRuntime
     {
+        private const float BaseDecisionMin = 0.16f;
+        private const float BaseDecisionMax = 0.34f;
+
         public static AiDifficulty Current { get; private set; } = AiDifficulty.Normal;
 
         public static float DecisionDelayMultiplier
@@ -63,6 +66,17 @@ namespace HaikyuuGame.Gameplay.AI
             int next = ((int)Current + 1) % 6;
             Current = (AiDifficulty)next;
             return Current;
+        }
+
+        public static void ApplyTo(VolleyballTuning tuning)
+        {
+            if (tuning == null)
+            {
+                return;
+            }
+
+            tuning.aiDecisionMin = BaseDecisionMin * DecisionDelayMultiplier;
+            tuning.aiDecisionMax = BaseDecisionMax * DecisionDelayMultiplier;
         }
     }
 }
