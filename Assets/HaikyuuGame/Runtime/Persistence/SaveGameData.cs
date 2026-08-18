@@ -6,7 +6,7 @@ namespace HaikyuuGame.Persistence
     [Serializable]
     public sealed class SaveGameData
     {
-        public int version = 3;
+        public int version = 4;
         public string language = "vi";
         public int playerLevel = 1;
         public int playerExperience;
@@ -55,6 +55,7 @@ namespace HaikyuuGame.Persistence
     [Serializable]
     public sealed class GameSettingsSaveData
     {
+        public int aiDifficulty = 1;
         public float masterVolume = 1f;
         public float musicVolume = 0.8f;
         public float sfxVolume = 1f;
