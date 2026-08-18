@@ -6,7 +6,7 @@ namespace HaikyuuGame.Persistence
     [Serializable]
     public sealed class SaveGameData
     {
-        public int version = 1;
+        public int version = 2;
         public string language = "vi";
         public int playerLevel = 1;
         public int playerExperience;
@@ -15,6 +15,7 @@ namespace HaikyuuGame.Persistence
         public int matchesWon;
         public int storyChapter;
         public List<string> unlockedCharacterIds = new List<string>();
+        public List<string> dreamTeamCharacterIds = new List<string>();
         public CareerSaveData career = new CareerSaveData();
         public GameSettingsSaveData settings = new GameSettingsSaveData();
 
@@ -57,5 +58,7 @@ namespace HaikyuuGame.Persistence
         public bool vibration = true;
         public bool reducedCinematics;
         public bool advancedControls;
+        public bool screenShake = true;
+        public bool highContrastUi;
     }
 }
