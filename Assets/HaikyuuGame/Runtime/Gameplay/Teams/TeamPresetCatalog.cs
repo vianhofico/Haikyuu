@@ -35,7 +35,7 @@ namespace HaikyuuGame.Gameplay.Teams
             { "kamomedai", new TeamPreset("kamomedai", "Kamomedai", new[] { null, "hoshiumi_korai", "hirugami_sachiro", "gao_hakuba", null, null }, null, 90) },
             { "all_star", new TeamPreset("all_star", "National All-Star", new[] { "miya_atsumu", "sakusa_kiyoomi", "hirugami_sachiro", "ushijima_wakatoshi", "kiryu_wakatsu", "suna_rintaro" }, "yaku_morisuke", 94) },
             { "dream_team", new TeamPreset("dream_team", "Dream Team", new[] { "kageyama_tobio", "bokuto_kotaro", "hinata_shoyo", "ushijima_wakatoshi", "hoshiumi_korai", "tsukishima_kei" }, "nishinoya_yu", 93) },
-            { "training", new TeamPreset("training", "Training Squad", new[] { null, null, null, null, null, null }, null, 63) }
+            { "training", new TeamPreset("training", "Training Squad", new string[] { null, null, null, null, null, null }, null, 63) }
         };
 
         public static TeamPreset Get(string id)
