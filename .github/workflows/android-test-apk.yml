@@ -60,19 +60,31 @@ jobs:
           androidExportType: androidPackage
           allowDirtyBuild: true
 
-      - name: Verify APK
+      - name: Verify and normalize APK
         shell: bash
         run: |
-          apk="build/AndroidTest/Haikyuu-Test.apk"
+          expected="build/AndroidTest/Haikyuu-Test.apk"
+          apk="$expected"
 
           if [[ ! -f "$apk" ]]; then
-            echo "Expected APK not found: $apk"
-            find build -maxdepth 5 -type f -print || true
+            echo "Expected APK path not found; discovering generated APK under build/."
+            apk="$(find build -type f -name '*.apk' -print -quit 2>/dev/null || true)"
+          fi
+
+          if [[ -z "$apk" || ! -f "$apk" ]]; then
+            echo "No APK found under build/."
+            find build -maxdepth 8 -type f -print || true
             exit 1
           fi
 
-          ls -lh "$apk"
-          sha256sum "$apk" | tee build/AndroidTest/Haikyuu-Test.apk.sha256
+          echo "Generated APK: $apk"
+          mkdir -p build/AndroidTest
+          if [[ "$apk" != "$expected" ]]; then
+            cp "$apk" "$expected"
+          fi
+
+          ls -lh "$expected"
+          sha256sum "$expected" | tee build/AndroidTest/Haikyuu-Test.apk.sha256
 
       - name: Upload Android test APK
         uses: actions/upload-artifact@v4
@@ -83,5 +95,3 @@ jobs:
             build/AndroidTest/Haikyuu-Test.apk.sha256
           if-no-files-found: error
           retention-days: 14
-
-# Diagnostic PR trigger marker.
