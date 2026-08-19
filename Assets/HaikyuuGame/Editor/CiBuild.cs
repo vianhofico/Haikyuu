@@ -17,10 +17,8 @@ namespace HaikyuuGame.Editor
         public static void BuildLinuxSmoke()
         {
             PrepareProject("Haikyuu CI Smoke");
-            Directory.CreateDirectory(Path.GetDirectoryName(LinuxOutput) ?? "build/StandaloneLinux64");
-
             BuildAndRequireSuccess(
-                LinuxOutput,
+                ResolveProjectPath(LinuxOutput),
                 BuildTarget.StandaloneLinux64,
                 BuildOptions.Development,
                 "CI_BUILD_PASS");
@@ -30,11 +28,9 @@ namespace HaikyuuGame.Editor
         {
             Debug.Log("CI_ANDROID_BUILD_START");
             PrepareProject("Haikyuu Volleyball Prototype");
-            Directory.CreateDirectory(Path.GetDirectoryName(AndroidOutput) ?? "build/Android");
-
             EditorUserBuildSettings.buildAppBundle = false;
             BuildAndRequireSuccess(
-                AndroidOutput,
+                ResolveProjectPath(AndroidOutput),
                 BuildTarget.Android,
                 BuildOptions.Development,
                 "CI_ANDROID_BUILD_PASS");
@@ -44,11 +40,9 @@ namespace HaikyuuGame.Editor
         {
             Debug.Log("CI_ANDROID_TEST_BUILD_START");
             PrepareAndroidTestProject("Haikyuu Test");
-            Directory.CreateDirectory(Path.GetDirectoryName(AndroidTestOutput) ?? "build/AndroidTest");
-
             EditorUserBuildSettings.buildAppBundle = false;
             BuildAndRequireSuccess(
-                AndroidTestOutput,
+                ResolveProjectPath(AndroidTestOutput),
                 BuildTarget.Android,
                 BuildOptions.Development | BuildOptions.AllowDebugging,
                 "CI_ANDROID_TEST_BUILD_PASS");
@@ -76,12 +70,26 @@ namespace HaikyuuGame.Editor
             PlayerSettings.companyName = "vianhofico";
         }
 
+        private static string ResolveProjectPath(string relativePath)
+        {
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string resolved = Path.GetFullPath(Path.Combine(projectRoot, relativePath));
+            Debug.Log($"CI_OUTPUT_PATH relative={relativePath} resolved={resolved}");
+            return resolved;
+        }
+
         private static void BuildAndRequireSuccess(
             string outputPath,
             BuildTarget target,
             BuildOptions buildOptions,
             string successMarker)
         {
+            string outputDirectory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+
             BuildPlayerOptions options = new BuildPlayerOptions
             {
                 scenes = new[] { ScenePath },
@@ -97,7 +105,20 @@ namespace HaikyuuGame.Editor
                     $"CI {target} build failed: {report.summary.result}; errors={report.summary.totalErrors}");
             }
 
-            Debug.Log($"{successMarker} path={outputPath} bytes={report.summary.totalSize}");
+            if (!File.Exists(outputPath))
+            {
+                throw new BuildFailedException(
+                    $"CI {target} reported success but output file is missing: {outputPath}");
+            }
+
+            FileInfo output = new FileInfo(outputPath);
+            if (output.Length <= 0)
+            {
+                throw new BuildFailedException(
+                    $"CI {target} produced an empty output file: {outputPath}");
+            }
+
+            Debug.Log($"{successMarker} path={outputPath} bytes={output.Length} reportBytes={report.summary.totalSize}");
         }
     }
 }
