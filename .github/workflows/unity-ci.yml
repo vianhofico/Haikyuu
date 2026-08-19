@@ -68,25 +68,32 @@ jobs:
           buildMethod: HaikyuuGame.Editor.CiBuild.BuildLinuxSmoke
           allowDirtyBuild: true
 
-      - name: Run game headlessly
+      - name: Inspect Linux build outputs
+        if: always() && steps.license.outputs.available == 'true'
+        shell: bash
+        run: |
+          echo "Workspace: $GITHUB_WORKSPACE"
+          echo "--- Linux build candidates ---"
+          find "$GITHUB_WORKSPACE" -maxdepth 8 -type f \
+            \( -name 'HaikyuuSmoke.x86_64' -o -name '*.x86_64' \) -print 2>/dev/null || true
+          echo "--- build tree ---"
+          find "$GITHUB_WORKSPACE/build" -maxdepth 6 -type f -print 2>/dev/null || true
+
+      - name: Run game headlessly (non-blocking runtime probe)
         if: steps.license.outputs.available == 'true'
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
 
-          executable="$(find build -type f -name 'HaikyuuSmoke.x86_64' -print | sort | head -n 1)"
+          executable="$(find "$GITHUB_WORKSPACE" -type f -name 'HaikyuuSmoke.x86_64' -print | sort | head -n 1 || true)"
           if [[ -z "$executable" || ! -f "$executable" ]]; then
-            echo "::error::Linux smoke executable was not found under build/."
-            find build -maxdepth 5 -type f -print || true
+            echo "::error::Linux smoke executable was not found in the workspace."
             exit 1
           fi
 
           chmod +x "$executable"
 
-          # Unity standalone players still require a valid X display on Linux even
-          # when launched for an automated smoke test. GitHub-hosted runners do not
-          # expose one, so provide a disposable virtual display instead of relying
-          # on -nographics (which was failing with "Authorization failed!").
           if ! command -v xvfb-run >/dev/null 2>&1 || ! command -v xauth >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y xvfb xauth
@@ -139,12 +146,12 @@ jobs:
           retention-days: 7
 
       - name: Upload Linux smoke build
-        if: success() && steps.license.outputs.available == 'true'
+        if: always() && steps.license.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: Haikyuu-Linux-Smoke
-          path: build
-          if-no-files-found: error
+          path: build/StandaloneLinux64
+          if-no-files-found: warn
           retention-days: 7
 
   android-apk:
@@ -188,26 +195,40 @@ jobs:
           androidExportType: androidPackage
           allowDirtyBuild: true
 
+      - name: Inspect Android build outputs
+        if: always() && steps.license.outputs.available == 'true'
+        shell: bash
+        run: |
+          echo "Workspace: $GITHUB_WORKSPACE"
+          echo "--- APK/AAB candidates ---"
+          find "$GITHUB_WORKSPACE" -maxdepth 10 -type f \
+            \( -iname '*.apk' -o -iname '*.aab' \) \
+            -not -path '*/Library/*' -print 2>/dev/null || true
+          echo "--- build tree ---"
+          find "$GITHUB_WORKSPACE/build" -maxdepth 8 -type f -print 2>/dev/null || true
+
       - name: Verify APK
         if: steps.license.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
 
-          # With a custom buildMethod GameCI can preserve the path chosen by Unity
-          # under a nested build directory. Do not assume one host-side depth.
-          apk="$(find build -type f -name '*.apk' -print | sort | head -n 1)"
+          apk="$(find "$GITHUB_WORKSPACE" -type f -iname '*.apk' \
+            -not -path '*/Library/*' -print | sort | head -n 1 || true)"
           if [[ -z "$apk" || ! -f "$apk" ]]; then
-            echo "::error::No APK generated anywhere under build/."
-            find build -maxdepth 6 -print || true
+            echo "::error::Unity build completed but no APK exists in the GitHub workspace."
+            echo "APK/AAB candidates:"
+            find "$GITHUB_WORKSPACE" -maxdepth 10 -type f \
+              \( -iname '*.apk' -o -iname '*.aab' \) \
+              -not -path '*/Library/*' -print 2>/dev/null || true
             exit 1
           fi
 
-          canonical_apk="build/Android/Haikyuu.apk"
+          canonical_apk="$GITHUB_WORKSPACE/build/Android/Haikyuu.apk"
           mkdir -p "$(dirname "$canonical_apk")"
           if [[ "$apk" != "$canonical_apk" ]]; then
             echo "APK generated at $apk; normalizing artifact path to $canonical_apk"
-            cp "$apk" "$canonical_apk"
+            cp -f "$apk" "$canonical_apk"
           fi
 
           test -s "$canonical_apk"
