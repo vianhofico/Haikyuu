@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
@@ -12,13 +13,13 @@ namespace HaikyuuGame.Editor
         private const string ScenePath = "Assets/Scenes/PlayableCore.unity";
         private const string LinuxOutput = "build/StandaloneLinux64/HaikyuuSmoke.x86_64";
         private const string AndroidOutput = "build/Android/Haikyuu.apk";
-        private const string AndroidTestOutput = "build/AndroidTest/Haikyuu-Test.apk";
+        private const string AndroidTestOutput = "build/Android/Haikyuu-Test.apk";
 
         public static void BuildLinuxSmoke()
         {
             PrepareProject("Haikyuu CI Smoke");
             BuildAndRequireSuccess(
-                ResolveProjectPath(LinuxOutput),
+                ResolveBuildOutput(LinuxOutput),
                 BuildTarget.StandaloneLinux64,
                 BuildOptions.Development,
                 "CI_BUILD_PASS");
@@ -30,7 +31,7 @@ namespace HaikyuuGame.Editor
             PrepareProject("Haikyuu Volleyball Prototype");
             EditorUserBuildSettings.buildAppBundle = false;
             BuildAndRequireSuccess(
-                ResolveProjectPath(AndroidOutput),
+                ResolveBuildOutput(AndroidOutput),
                 BuildTarget.Android,
                 BuildOptions.Development,
                 "CI_ANDROID_BUILD_PASS");
@@ -42,7 +43,7 @@ namespace HaikyuuGame.Editor
             PrepareAndroidTestProject("Haikyuu Test");
             EditorUserBuildSettings.buildAppBundle = false;
             BuildAndRequireSuccess(
-                ResolveProjectPath(AndroidTestOutput),
+                ResolveBuildOutput(AndroidTestOutput),
                 BuildTarget.Android,
                 BuildOptions.Development | BuildOptions.AllowDebugging,
                 "CI_ANDROID_TEST_BUILD_PASS");
@@ -70,12 +71,34 @@ namespace HaikyuuGame.Editor
             PlayerSettings.companyName = "vianhofico";
         }
 
-        private static string ResolveProjectPath(string relativePath)
+        private static string ResolveBuildOutput(string fallbackRelativePath)
         {
+            string gameCiPath = GetCommandLineArgument("-customBuildPath");
+            if (!string.IsNullOrWhiteSpace(gameCiPath))
+            {
+                string resolvedGameCiPath = Path.GetFullPath(gameCiPath);
+                Debug.Log($"CI_OUTPUT_PATH source=gameci raw={gameCiPath} resolved={resolvedGameCiPath}");
+                return resolvedGameCiPath;
+            }
+
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            string resolved = Path.GetFullPath(Path.Combine(projectRoot, relativePath));
-            Debug.Log($"CI_OUTPUT_PATH relative={relativePath} resolved={resolved}");
-            return resolved;
+            string fallbackPath = Path.GetFullPath(Path.Combine(projectRoot, fallbackRelativePath));
+            Debug.Log($"CI_OUTPUT_PATH source=fallback raw={fallbackRelativePath} resolved={fallbackPath}");
+            return fallbackPath;
+        }
+
+        private static string GetCommandLineArgument(string argumentName)
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], argumentName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return args[i + 1];
+                }
+            }
+
+            return null;
         }
 
         private static void BuildAndRequireSuccess(
