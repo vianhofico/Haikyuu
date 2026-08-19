@@ -1,0 +1,82 @@
+name: Build Android Test APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+  UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+  UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+  UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+
+jobs:
+  build-test-apk:
+    name: Android sideload test APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect Unity license configuration
+        id: license
+        shell: bash
+        run: |
+          personal=false
+          professional=false
+
+          if [[ -n "$UNITY_LICENSE" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
+            personal=true
+          fi
+
+          if [[ -n "$UNITY_SERIAL" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
+            professional=true
+          fi
+
+          if [[ "$personal" == "true" || "$professional" == "true" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Unity CI license configuration detected."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Unity license configuration is missing. Configure UNITY_LICENSE + UNITY_EMAIL + UNITY_PASSWORD for Personal, or UNITY_SERIAL + UNITY_EMAIL + UNITY_PASSWORD for Pro."
+            exit 1
+          fi
+
+      - name: Build Android test APK with Unity 6.3
+        uses: game-ci/unity-builder@v5.0.0
+        with:
+          unityVersion: 6000.3.0f1
+          targetPlatform: Android
+          buildName: Haikyuu-Test
+          buildsPath: build
+          buildMethod: HaikyuuGame.Editor.CiBuild.BuildAndroidTestApk
+          androidExportType: androidPackage
+          allowDirtyBuild: true
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          apk="build/AndroidTest/Haikyuu-Test.apk"
+
+          if [[ ! -f "$apk" ]]; then
+            echo "Expected APK not found: $apk"
+            find build -maxdepth 5 -type f -print || true
+            exit 1
+          fi
+
+          ls -lh "$apk"
+          sha256sum "$apk" | tee build/AndroidTest/Haikyuu-Test.apk.sha256
+
+      - name: Upload Android test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Haikyuu-Test-APK
+          path: |
+            build/AndroidTest/Haikyuu-Test.apk
+            build/AndroidTest/Haikyuu-Test.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
