@@ -12,6 +12,7 @@ namespace HaikyuuGame.Editor
         private const string ScenePath = "Assets/Scenes/PlayableCore.unity";
         private const string LinuxOutput = "build/StandaloneLinux64/HaikyuuSmoke.x86_64";
         private const string AndroidOutput = "build/Android/Haikyuu.apk";
+        private const string AndroidTestOutput = "build/AndroidTest/Haikyuu-Test.apk";
 
         public static void BuildLinuxSmoke()
         {
@@ -39,11 +40,38 @@ namespace HaikyuuGame.Editor
                 "CI_ANDROID_BUILD_PASS");
         }
 
+        public static void BuildAndroidTestApk()
+        {
+            Debug.Log("CI_ANDROID_TEST_BUILD_START");
+            PrepareAndroidTestProject("Haikyuu Test");
+            Directory.CreateDirectory(Path.GetDirectoryName(AndroidTestOutput) ?? "build/AndroidTest");
+
+            EditorUserBuildSettings.buildAppBundle = false;
+            BuildAndRequireSuccess(
+                AndroidTestOutput,
+                BuildTarget.Android,
+                BuildOptions.Development | BuildOptions.AllowDebugging,
+                "CI_ANDROID_TEST_BUILD_PASS");
+        }
+
         private static void PrepareProject(string productName)
         {
             Debug.Log("CI_BUILD_START");
             ProjectValidator.ValidateProjectData();
             PlayableCoreSceneBuilder.Generate();
+            ApplyPlayerSettings(productName);
+        }
+
+        private static void PrepareAndroidTestProject(string productName)
+        {
+            Debug.Log("CI_TEST_BUILD_START");
+            Debug.Log("CI_TEST_BUILD_NOTE ProjectValidator.ValidateProjectData is intentionally skipped for sideload testing.");
+            PlayableCoreSceneBuilder.Generate();
+            ApplyPlayerSettings(productName);
+        }
+
+        private static void ApplyPlayerSettings(string productName)
+        {
             PlayerSettings.productName = productName;
             PlayerSettings.companyName = "vianhofico";
         }
