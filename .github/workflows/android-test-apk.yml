@@ -65,7 +65,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          expected="$GITHUB_WORKSPACE/build/AndroidTest/Haikyuu-Test.apk"
+          expected="$GITHUB_WORKSPACE/build/Android/Haikyuu-Test.apk"
 
           if [[ ! -f "$expected" ]]; then
             echo "::error::Unity build completed but the canonical APK is missing: $expected"
@@ -90,7 +90,7 @@ jobs:
         with:
           name: Haikyuu-Test-APK
           path: |
-            build/AndroidTest/Haikyuu-Test.apk
-            build/AndroidTest/Haikyuu-Test.apk.sha256
+            build/Android/Haikyuu-Test.apk
+            build/Android/Haikyuu-Test.apk.sha256
           if-no-files-found: error
           retention-days: 14
