@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
@@ -12,15 +13,13 @@ namespace HaikyuuGame.Editor
         private const string ScenePath = "Assets/Scenes/PlayableCore.unity";
         private const string LinuxOutput = "build/StandaloneLinux64/HaikyuuSmoke.x86_64";
         private const string AndroidOutput = "build/Android/Haikyuu.apk";
-        private const string AndroidTestOutput = "build/AndroidTest/Haikyuu-Test.apk";
+        private const string AndroidTestOutput = "build/Android/Haikyuu-Test.apk";
 
         public static void BuildLinuxSmoke()
         {
             PrepareProject("Haikyuu CI Smoke");
-            Directory.CreateDirectory(Path.GetDirectoryName(LinuxOutput) ?? "build/StandaloneLinux64");
-
             BuildAndRequireSuccess(
-                LinuxOutput,
+                ResolveBuildOutput(LinuxOutput),
                 BuildTarget.StandaloneLinux64,
                 BuildOptions.Development,
                 "CI_BUILD_PASS");
@@ -30,11 +29,9 @@ namespace HaikyuuGame.Editor
         {
             Debug.Log("CI_ANDROID_BUILD_START");
             PrepareProject("Haikyuu Volleyball Prototype");
-            Directory.CreateDirectory(Path.GetDirectoryName(AndroidOutput) ?? "build/Android");
-
             EditorUserBuildSettings.buildAppBundle = false;
             BuildAndRequireSuccess(
-                AndroidOutput,
+                ResolveBuildOutput(AndroidOutput),
                 BuildTarget.Android,
                 BuildOptions.Development,
                 "CI_ANDROID_BUILD_PASS");
@@ -44,11 +41,9 @@ namespace HaikyuuGame.Editor
         {
             Debug.Log("CI_ANDROID_TEST_BUILD_START");
             PrepareAndroidTestProject("Haikyuu Test");
-            Directory.CreateDirectory(Path.GetDirectoryName(AndroidTestOutput) ?? "build/AndroidTest");
-
             EditorUserBuildSettings.buildAppBundle = false;
             BuildAndRequireSuccess(
-                AndroidTestOutput,
+                ResolveBuildOutput(AndroidTestOutput),
                 BuildTarget.Android,
                 BuildOptions.Development | BuildOptions.AllowDebugging,
                 "CI_ANDROID_TEST_BUILD_PASS");
@@ -76,12 +71,48 @@ namespace HaikyuuGame.Editor
             PlayerSettings.companyName = "vianhofico";
         }
 
+        private static string ResolveBuildOutput(string fallbackRelativePath)
+        {
+            string gameCiPath = GetCommandLineArgument("-customBuildPath");
+            if (!string.IsNullOrWhiteSpace(gameCiPath))
+            {
+                string resolvedGameCiPath = Path.GetFullPath(gameCiPath);
+                Debug.Log($"CI_OUTPUT_PATH source=gameci raw={gameCiPath} resolved={resolvedGameCiPath}");
+                return resolvedGameCiPath;
+            }
+
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string fallbackPath = Path.GetFullPath(Path.Combine(projectRoot, fallbackRelativePath));
+            Debug.Log($"CI_OUTPUT_PATH source=fallback raw={fallbackRelativePath} resolved={fallbackPath}");
+            return fallbackPath;
+        }
+
+        private static string GetCommandLineArgument(string argumentName)
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], argumentName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return args[i + 1];
+                }
+            }
+
+            return null;
+        }
+
         private static void BuildAndRequireSuccess(
             string outputPath,
             BuildTarget target,
             BuildOptions buildOptions,
             string successMarker)
         {
+            string outputDirectory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+
             BuildPlayerOptions options = new BuildPlayerOptions
             {
                 scenes = new[] { ScenePath },
@@ -97,7 +128,20 @@ namespace HaikyuuGame.Editor
                     $"CI {target} build failed: {report.summary.result}; errors={report.summary.totalErrors}");
             }
 
-            Debug.Log($"{successMarker} path={outputPath} bytes={report.summary.totalSize}");
+            if (!File.Exists(outputPath))
+            {
+                throw new BuildFailedException(
+                    $"CI {target} reported success but output file is missing: {outputPath}");
+            }
+
+            FileInfo output = new FileInfo(outputPath);
+            if (output.Length <= 0)
+            {
+                throw new BuildFailedException(
+                    $"CI {target} produced an empty output file: {outputPath}");
+            }
+
+            Debug.Log($"{successMarker} path={outputPath} bytes={output.Length} reportBytes={report.summary.totalSize}");
         }
     }
 }

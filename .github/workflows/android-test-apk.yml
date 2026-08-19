@@ -59,27 +59,39 @@ jobs:
           buildMethod: HaikyuuGame.Editor.CiBuild.BuildAndroidTestApk
           androidExportType: androidPackage
           allowDirtyBuild: true
+          dockerWorkspacePath: /project
 
-      - name: Verify APK
+      - name: Verify canonical APK
         shell: bash
         run: |
-          apk="build/AndroidTest/Haikyuu-Test.apk"
+          set -euo pipefail
 
-          if [[ ! -f "$apk" ]]; then
-            echo "Expected APK not found: $apk"
-            find build -maxdepth 5 -type f -print || true
+          expected="$GITHUB_WORKSPACE/build/Android/Haikyuu-Test.apk"
+
+          if [[ ! -f "$expected" ]]; then
+            echo "::error::Unity build completed but the canonical APK is missing: $expected"
+            echo "--- build tree ---"
+            find "$GITHUB_WORKSPACE/build" -maxdepth 8 -type f -print 2>/dev/null || true
+            echo "--- APK candidates in workspace ---"
+            find "$GITHUB_WORKSPACE" -maxdepth 10 -type f -iname '*.apk' -not -path '*/Library/*' -print 2>/dev/null || true
             exit 1
           fi
 
-          ls -lh "$apk"
-          sha256sum "$apk" | tee build/AndroidTest/Haikyuu-Test.apk.sha256
+          if [[ ! -s "$expected" ]]; then
+            echo "::error::APK exists but is empty: $expected"
+            exit 1
+          fi
+
+          ls -lh "$expected"
+          sha256sum "$expected" | tee "$expected.sha256"
+          echo "APK verified: $expected ($(stat -c%s "$expected") bytes)"
 
       - name: Upload Android test APK
         uses: actions/upload-artifact@v4
         with:
           name: Haikyuu-Test-APK
           path: |
-            build/AndroidTest/Haikyuu-Test.apk
-            build/AndroidTest/Haikyuu-Test.apk.sha256
+            build/Android/Haikyuu-Test.apk
+            build/Android/Haikyuu-Test.apk.sha256
           if-no-files-found: error
           retention-days: 14
