@@ -59,6 +59,7 @@ jobs:
           buildMethod: HaikyuuGame.Editor.CiBuild.BuildAndroidTestApk
           androidExportType: androidPackage
           allowDirtyBuild: true
+          dockerWorkspacePath: /project
 
       - name: Verify canonical APK
         shell: bash
